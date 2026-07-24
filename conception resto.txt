@@ -1,0 +1,252 @@
+ opencode -s ses_070edca2cffe0WfyCecgebUGr1
+
+
+# Restaurant Management SaaS — Document de Conception
+
+## 1. Vue d'ensemble
+
+Une plateforme SaaS multi-tenant permettant à des restaurants de gérer leur menu, leurs commandes en temps réel, leurs tables/réservations et leur personnel, avec un espace client (commande via QR code) et un espace admin/staff.
+
+**Multi-tenant** = plusieurs restaurants utilisent la même application, chacun avec ses propres données isolées (menu, commandes, staff).
+
+---
+
+## 2. Acteurs (rôles)
+
+| Rôle | Accès |
+|---|---|
+| **Super Admin** (toi, propriétaire SaaS) | Gère les restaurants inscrits, abonnements |
+| **Owner** (propriétaire du restaurant) | Gère son restaurant : menu, staff, stats, paramètres |
+| **Manager** | Supervise commandes, tables, staff (pas de facturation SaaS) |
+| **Staff cuisine** | Voit uniquement les commandes à préparer, change statut |
+| **Serveur** | Voit les commandes de ses tables, encaisse |
+| **Client** (anonyme) | Scanne QR code → consulte menu → commande (pas de compte requis) |
+
+---
+
+## 3. Modèle de données (MongoDB — collections)
+
+### `Restaurant`
+```
+{
+  _id,
+  name,
+  slug,           // pour l'URL publique (ex: /r/pizza-luna)
+  logo,
+  address,
+  subscriptionPlan,  // free / pro / premium
+  subscriptionStatus,
+  createdAt
+}
+```
+
+### `User` (staff/admin)
+```
+{
+  _id,
+  restaurantId,   // référence Restaurant
+  name,
+  email,
+  passwordHash,
+  role,           // owner | manager | kitchen | server
+  isActive,
+  createdAt
+}
+```
+
+### `MenuCategory`
+```
+{
+  _id,
+  restaurantId,
+  name,           // ex: "Entrées", "Plats", "Desserts"
+  order           // pour l'affichage
+}
+```
+
+### `MenuItem`
+```
+{
+  _id,
+  restaurantId,
+  categoryId,
+  name,
+  description,
+  price,
+  photo,
+  isAvailable,    // rupture de stock = false
+  prepTimeMinutes // utile pour stats
+}
+```
+
+### `Table`
+```
+{
+  _id,
+  restaurantId,
+  number,         // "Table 5"
+  qrCodeToken,    // token unique encodé dans le QR
+  status,         // free | occupied | reserved
+  capacity
+}
+```
+
+### `Order`
+```
+{
+  _id,
+  restaurantId,
+  tableId,
+  items: [
+    { menuItemId, name, price, quantity, notes }
+  ],
+  status,         // pending | preparing | ready | served | paid | cancelled
+  totalPrice,
+  createdAt,
+  updatedAt
+}
+```
+
+### `Reservation`
+```
+{
+  _id,
+  restaurantId,
+  customerName,
+  customerPhone,
+  date,
+  time,
+  partySize,
+  tableId,        // assignée ou null si pas encore
+  status          // confirmed | pending | cancelled
+}
+```
+
+---
+
+## 4. Flux principaux
+
+### Flux client (sans compte)
+1. Client scanne le QR code sur la table → URL type `app.com/r/pizza-luna/table/5`
+2. Le frontend charge le menu du restaurant (public, pas d'auth)
+3. Client ajoute des plats au panier → confirme la commande
+4. Commande créée avec `status: pending`, liée à `tableId`
+5. Via Socket.io, la commande apparaît instantanément en cuisine
+
+### Flux cuisine (temps réel)
+1. Staff cuisine connecté voit toutes les commandes `pending`/`preparing` de son restaurant
+2. Il change le statut → `preparing` → `ready`
+3. Le changement est émis via WebSocket → le serveur (staff) est notifié que la commande est prête à servir
+
+### Flux serveur
+1. Voit les commandes `ready` de ses tables assignées
+2. Marque `served`
+3. À la fin du repas, encaisse → `status: paid`
+
+### Flux réservation
+1. Client ou staff crée une réservation (formulaire simple, pas besoin de compte client)
+2. Manager assigne une table le jour J
+3. Notification email/SMS de confirmation (via un service comme Twilio/SendGrid)
+
+---
+
+## 5. Architecture technique
+
+```
+┌─────────────────────┐         ┌──────────────────────┐
+│   Frontend Client    │         │   Frontend Admin      │
+│  (menu + commande)   │         │  (dashboard staff)    │
+│  React + Vite        │         │  React + Vite         │
+└──────────┬───────────┘         └──────────┬────────────┘
+           │                                  │
+           └──────────────┬───────────────────┘
+                           │ REST API + WebSocket
+                  ┌────────▼─────────┐
+                  │   Backend Node.js │
+                  │   Express + Socket.io │
+                  └────────┬──────────┘
+                           │
+                  ┌────────▼─────────┐
+                  │     MongoDB        │
+                  └───────────────────┘
+```
+
+**Pourquoi un frontend séparé client / admin ?**
+- Le client n'a pas besoin d'auth ni de logique staff → bundle plus léger, plus rapide sur mobile
+- L'admin a besoin de plus de logique (rôles, permissions, dashboard) → séparation propre des responsabilités
+- (Alternative plus simple pour un premier MVP : un seul frontend avec routes conditionnelles selon rôle — à voir si tu veux aller plus vite)
+
+---
+
+## 6. Endpoints API (aperçu)
+
+```
+Auth (staff)
+POST   /api/auth/register
+POST   /api/auth/login
+POST   /api/auth/refresh
+
+Restaurant
+GET    /api/restaurants/:slug        // public, infos + menu
+
+Menu (admin)
+GET    /api/menu/:restaurantId
+POST   /api/menu/items
+PUT    /api/menu/items/:id
+DELETE /api/menu/items/:id
+
+Commandes
+POST   /api/orders                   // client crée une commande
+GET    /api/orders?restaurantId=     // staff liste les commandes
+PATCH  /api/orders/:id/status        // changement de statut
+
+Tables
+GET    /api/tables/:restaurantId
+POST   /api/tables
+PATCH  /api/tables/:id/status
+
+Réservations
+POST   /api/reservations
+GET    /api/reservations/:restaurantId
+```
+
+**Events Socket.io**
+```
+"order:new"        → émis quand un client passe commande
+"order:statusChanged" → émis quand cuisine/serveur change le statut
+```
+
+---
+
+## 7. Stack technique récapitulative
+
+| Couche | Techno |
+|---|---|
+| Frontend | React + Vite + TanStack Query + Tailwind |
+| Backend | Node.js + Express |
+| Temps réel | Socket.io |
+| DB | MongoDB + Mongoose |
+| Auth | JWT (access + refresh token), rôles middleware |
+| Notifications | SendGrid (email) / Twilio (SMS) — optionnel v2 |
+| Paiement | Stripe (v2, optionnel) |
+| QR Code | librairie `qrcode` (génération), route publique par table |
+
+---
+
+## 8. Roadmap de développement (7 étapes)
+
+1. **Scaffolding** — repo, structure dossiers, modèles Mongoose, auth JWT + rôles
+2. **Gestion du menu** — CRUD catégories/plats côté admin
+3. **Flow commande client** — page publique menu + panier + création de commande
+4. **Temps réel** — intégration Socket.io, mise à jour live des statuts en cuisine
+5. **Tables + réservations** — plan de salle simple, formulaire réservation
+6. **Dashboard analytics** — ventes du jour, plats populaires, temps moyen de préparation
+7. **Polish** — paiement Stripe (optionnel), responsive mobile, déploiement
+
+---
+
+## 9. Points à trancher avant de coder
+
+- MVP mono-restaurant d'abord, ou multi-tenant dès le départ ? (multi-tenant = plus de valeur portfolio mais plus complexe)
+- Un seul frontend avec rôles, ou deux frontends séparés (client/admin) ?
+- Paiement en ligne inclus dès la v1, ou juste encaissement manuel par le serveur ?
