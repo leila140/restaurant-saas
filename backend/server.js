@@ -27,8 +27,9 @@ app.get("/api/health", (req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
 
-// TODO: Import and use routes here
-// app.use("/api/auth", require("./routes/auth"));
+// Routes
+app.use("/api/auth", require("./routes/auth"));
+// TODO: uncomment as we build them
 // app.use("/api/restaurants", require("./routes/restaurants"));
 // app.use("/api/menu", require("./routes/menu"));
 // app.use("/api/orders", require("./routes/orders"));
