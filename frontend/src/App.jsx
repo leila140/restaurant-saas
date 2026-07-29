@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AuthProvider } from "./context/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -13,6 +13,11 @@ import ReservationsView from "./pages/dashboard/ReservationsView";
 
 const queryClient = new QueryClient();
 
+function HomeRedirect() {
+  const user = JSON.parse(localStorage.getItem("user"));
+  return <Navigate to={user ? "/dashboard" : "/login"} replace />;
+}
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
@@ -21,6 +26,9 @@ function App() {
           <Routes>
             {/* Public routes */}
             <Route path="/r/:slug" element={<MenuView />} />
+
+            {/* Root redirect */}
+            <Route path="/" element={<HomeRedirect />} />
 
             {/* Auth */}
             <Route path="/login" element={<Login />} />
