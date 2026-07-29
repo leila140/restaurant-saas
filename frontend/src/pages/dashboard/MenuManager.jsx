@@ -1,8 +1,319 @@
+import { useState, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import api from "../../services/api";
+
 export default function MenuManager() {
+  const queryClient = useQueryClient();
+  const [restaurantId, setRestaurantId] = useState(null);
+
+  useEffect(() => {
+    const user = JSON.parse(localStorage.getItem("user"));
+    if (user?.restaurantId) setRestaurantId(user.restaurantId);
+  }, []);
+
+  const { data: menu = [] } = useQuery({
+    queryKey: ["menu", restaurantId],
+    queryFn: () => api.get(`/menu/${restaurantId}`).then((r) => r.data),
+    enabled: !!restaurantId,
+  });
+
+  const createCategory = useMutation({
+    mutationFn: (data) =>
+      api.post(`/menu/${restaurantId}/categories`, data),
+    onSuccess: () => queryClient.invalidateQueries(["menu", restaurantId]),
+  });
+
+  const updateCategory = useMutation({
+    mutationFn: ({ id, ...data }) =>
+      api.put(`/menu/${restaurantId}/categories/${id}`, data),
+    onSuccess: () => queryClient.invalidateQueries(["menu", restaurantId]),
+  });
+
+  const deleteCategory = useMutation({
+    mutationFn: (id) => api.delete(`/menu/${restaurantId}/categories/${id}`),
+    onSuccess: () => queryClient.invalidateQueries(["menu", restaurantId]),
+  });
+
+  const createItem = useMutation({
+    mutationFn: (data) => api.post(`/menu/${restaurantId}/items`, data),
+    onSuccess: () => queryClient.invalidateQueries(["menu", restaurantId]),
+  });
+
+  const updateItem = useMutation({
+    mutationFn: ({ id, ...data }) =>
+      api.put(`/menu/${restaurantId}/items/${id}`, data),
+    onSuccess: () => queryClient.invalidateQueries(["menu", restaurantId]),
+  });
+
+  const deleteItem = useMutation({
+    mutationFn: (id) => api.delete(`/menu/${restaurantId}/items/${id}`),
+    onSuccess: () => queryClient.invalidateQueries(["menu", restaurantId]),
+  });
+
+  const [newCatName, setNewCatName] = useState("");
+  const [newItem, setNewItem] = useState({
+    categoryId: "",
+    name: "",
+    description: "",
+    price: "",
+    prepTimeMinutes: 15,
+  });
+  const [editingItem, setEditingItem] = useState(null);
+  const [editForm, setEditForm] = useState({});
+
+  const handleCreateCategory = (e) => {
+    e.preventDefault();
+    if (!newCatName.trim()) return;
+    createCategory.mutate({ name: newCatName, order: menu.length });
+    setNewCatName("");
+  };
+
+  const handleCreateItem = (e) => {
+    e.preventDefault();
+    if (!newItem.name || !newItem.price || !newItem.categoryId) return;
+    createItem.mutate({
+      ...newItem,
+      price: parseFloat(newItem.price),
+      prepTimeMinutes: parseInt(newItem.prepTimeMinutes),
+    });
+    setNewItem({
+      categoryId: newItem.categoryId,
+      name: "",
+      description: "",
+      price: "",
+      prepTimeMinutes: 15,
+    });
+  };
+
+  const handleToggleAvailable = (item) => {
+    updateItem.mutate({ id: item._id, isAvailable: !item.isAvailable });
+  };
+
+  const handleEditItem = (item) => {
+    setEditingItem(item._id);
+    setEditForm({
+      name: item.name,
+      description: item.description,
+      price: item.price,
+      prepTimeMinutes: item.prepTimeMinutes,
+    });
+  };
+
+  const handleSaveEdit = (itemId) => {
+    updateItem.mutate({ id: itemId, ...editForm });
+    setEditingItem(null);
+  };
+
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold text-gray-800">Gestion du Menu</h1>
-      <p className="text-gray-500 mt-2">Catégories et plats</p>
+    <div className="p-6 max-w-4xl mx-auto">
+      <h1 className="text-2xl font-bold text-gray-800 mb-6">Gestion du Menu</h1>
+
+      {/* Create Category */}
+      <div className="bg-white rounded-xl shadow-sm p-4 mb-6">
+        <h2 className="font-semibold text-gray-700 mb-3">Ajouter une catégorie</h2>
+        <form onSubmit={handleCreateCategory} className="flex gap-2">
+          <input
+            type="text"
+            value={newCatName}
+            onChange={(e) => setNewCatName(e.target.value)}
+            placeholder="Nom de la catégorie"
+            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900"
+          />
+          <button
+            type="submit"
+            className="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors"
+          >
+            Ajouter
+          </button>
+        </form>
+      </div>
+
+      {/* Categories & Items */}
+      {menu.map((cat) => (
+        <div key={cat._id} className="bg-white rounded-xl shadow-sm p-4 mb-4">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="font-semibold text-gray-700 text-lg">{cat.name}</h2>
+            <button
+              onClick={() => {
+                if (confirm("Supprimer cette catégorie et tous ses plats ?")) {
+                  deleteCategory.mutate(cat._id);
+                }
+              }}
+              className="text-red-500 hover:text-red-700 text-sm"
+            >
+              Supprimer
+            </button>
+          </div>
+
+          {/* Items */}
+          <div className="space-y-2">
+            {cat.items?.map((item) => (
+              <div
+                key={item._id}
+                className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg"
+              >
+                {editingItem === item._id ? (
+                  <div className="flex-1 flex gap-2 flex-wrap">
+                    <input
+                      value={editForm.name}
+                      onChange={(e) =>
+                        setEditForm({ ...editForm, name: e.target.value })
+                      }
+                      className="px-2 py-1 border rounded text-sm"
+                      placeholder="Nom"
+                    />
+                    <input
+                      value={editForm.price}
+                      onChange={(e) =>
+                        setEditForm({ ...editForm, price: parseFloat(e.target.value) })
+                      }
+                      type="number"
+                      step="0.01"
+                      className="w-20 px-2 py-1 border rounded text-sm"
+                      placeholder="Prix"
+                    />
+                    <button
+                      onClick={() => handleSaveEdit(item._id)}
+                      className="px-3 py-1 bg-green-600 text-white rounded text-sm"
+                    >
+                      OK
+                    </button>
+                    <button
+                      onClick={() => setEditingItem(null)}
+                      className="px-3 py-1 bg-gray-300 text-gray-700 rounded text-sm"
+                    >
+                      Annuler
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex-1">
+                      <span
+                        className={`font-medium ${
+                          item.isAvailable ? "text-gray-800" : "text-gray-400 line-through"
+                        }`}
+                      >
+                        {item.name}
+                      </span>
+                      {item.description && (
+                        <p className="text-sm text-gray-500">{item.description}</p>
+                      )}
+                    </div>
+                    <span className="font-semibold text-gray-800">
+                      {item.price.toFixed(2)} €
+                    </span>
+                    <span className="text-xs text-gray-400">
+                      {item.prepTimeMinutes}min
+                    </span>
+                    <button
+                      onClick={() => handleToggleAvailable(item)}
+                      className={`px-2 py-1 text-xs rounded ${
+                        item.isAvailable
+                          ? "bg-green-100 text-green-700"
+                          : "bg-red-100 text-red-700"
+                      }`}
+                    >
+                      {item.isAvailable ? "Dispo" : "Indispo"}
+                    </button>
+                    <button
+                      onClick={() => handleEditItem(item)}
+                      className="text-gray-500 hover:text-gray-700 text-sm"
+                    >
+                      ✏️
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (confirm("Supprimer ce plat ?")) {
+                          deleteItem.mutate(item._id);
+                        }
+                      }}
+                      className="text-red-500 hover:text-red-700 text-sm"
+                    >
+                      🗑️
+                    </button>
+                  </>
+                )}
+              </div>
+            ))}
+            {(!cat.items || cat.items.length === 0) && (
+              <p className="text-gray-400 text-sm italic">Aucun plat</p>
+            )}
+          </div>
+
+          {/* Add Item Form */}
+          {newItem.categoryId === cat._id ? (
+            <form onSubmit={handleCreateItem} className="mt-3 p-3 bg-gray-50 rounded-lg space-y-2">
+              <div className="flex gap-2">
+                <input
+                  value={newItem.name}
+                  onChange={(e) => setNewItem({ ...newItem, name: e.target.value })}
+                  placeholder="Nom du plat"
+                  className="flex-1 px-2 py-1 border rounded text-sm"
+                  required
+                />
+                <input
+                  value={newItem.price}
+                  onChange={(e) => setNewItem({ ...newItem, price: e.target.value })}
+                  type="number"
+                  step="0.01"
+                  placeholder="Prix"
+                  className="w-24 px-2 py-1 border rounded text-sm"
+                  required
+                />
+                <input
+                  value={newItem.prepTimeMinutes}
+                  onChange={(e) =>
+                    setNewItem({ ...newItem, prepTimeMinutes: e.target.value })
+                  }
+                  type="number"
+                  placeholder="Min"
+                  className="w-16 px-2 py-1 border rounded text-sm"
+                />
+              </div>
+              <input
+                value={newItem.description}
+                onChange={(e) =>
+                  setNewItem({ ...newItem, description: e.target.value })
+                }
+                placeholder="Description (optionnel)"
+                className="w-full px-2 py-1 border rounded text-sm"
+              />
+              <div className="flex gap-2">
+                <button
+                  type="submit"
+                  className="px-3 py-1 bg-gray-900 text-white rounded text-sm"
+                >
+                  Ajouter
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setNewItem({
+                      categoryId: "",
+                      name: "",
+                      description: "",
+                      price: "",
+                      prepTimeMinutes: 15,
+                    })
+                  }
+                  className="px-3 py-1 bg-gray-300 text-gray-700 rounded text-sm"
+                >
+                  Annuler
+                </button>
+              </div>
+            </form>
+          ) : (
+            <button
+              onClick={() =>
+                setNewItem({ ...newItem, categoryId: cat._id })
+              }
+              className="mt-3 text-sm text-gray-600 hover:text-gray-900"
+            >
+              + Ajouter un plat
+            </button>
+          )}
+        </div>
+      ))}
     </div>
   );
 }

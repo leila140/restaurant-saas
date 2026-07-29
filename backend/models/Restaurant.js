@@ -40,6 +40,4 @@ const restaurantSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-restaurantSchema.index({ slug: 1 });
-
 module.exports = mongoose.model("Restaurant", restaurantSchema);

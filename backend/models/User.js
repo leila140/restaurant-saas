@@ -37,6 +37,5 @@ const userSchema = new mongoose.Schema(
 );
 
 userSchema.index({ restaurantId: 1 });
-userSchema.index({ email: 1 });
 
 module.exports = mongoose.model("User", userSchema);
