@@ -24,7 +24,8 @@ function App() {
       <AuthProvider>
         <BrowserRouter>
           <Routes>
-            {/* Public routes */}
+            {/* Public routes — table route must come before generic slug route */}
+            <Route path="/r/:slug/table/:token" element={<MenuView />} />
             <Route path="/r/:slug" element={<MenuView />} />
 
             {/* Root redirect */}

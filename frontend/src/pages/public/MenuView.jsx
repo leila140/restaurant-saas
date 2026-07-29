@@ -4,13 +4,24 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import api from "../../services/api";
 
 export default function MenuView() {
-  const { slug } = useParams();
+  const { slug, token } = useParams();
   const [cart, setCart] = useState([]);
   const [tableId, setTableId] = useState(null);
   const [tableNumber, setTableNumber] = useState(null);
   const [showCart, setShowCart] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(false);
-  const [notes, setNotes] = useState({});
+
+  // Auto-resolve table from QR token in URL
+  useQuery({
+    queryKey: ["table-by-token", token],
+    queryFn: () =>
+      api.get(`/tables/token/${token}`).then((r) => {
+        setTableId(r.data._id);
+        setTableNumber(`Table ${r.data.number}`);
+        return r.data;
+      }),
+    enabled: !!token,
+  });
 
   const { data: restaurant, isLoading } = useQuery({
     queryKey: ["restaurant", slug],
@@ -129,8 +140,8 @@ export default function MenuView() {
         </div>
       )}
 
-      {/* Table selection */}
-      {!tableId && (
+      {/* Table selection — only show if no QR token in URL */}
+      {!tableId && !token && (
         <div className="max-w-lg mx-auto px-4 mt-4">
           <div className="bg-white rounded-xl shadow-sm p-4">
             <h2 className="font-semibold text-gray-700 mb-2">Numéro de token de table</h2>
