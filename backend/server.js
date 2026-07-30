@@ -34,6 +34,7 @@ app.use("/api/menu", require("./routes/menu"));
 app.use("/api/orders", require("./routes/orders"));
 app.use("/api/tables", require("./routes/tables"));
 app.use("/api/reservations", require("./routes/reservations"));
+app.use("/api/reviews", require("./routes/reviews"));
 
 // Socket.io connection
 io.on("connection", (socket) => {

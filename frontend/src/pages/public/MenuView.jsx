@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import api from "../../services/api";
+import Confetti from "../../components/Confetti";
+import OrderTracking from "../../components/OrderTracking";
 
 export default function MenuView() {
   const { slug, token } = useParams();
@@ -10,6 +12,8 @@ export default function MenuView() {
   const [tableNumber, setTableNumber] = useState(null);
   const [showCart, setShowCart] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(false);
+  const [confettiActive, setConfettiActive] = useState(false);
+  const [lastOrder, setLastOrder] = useState(null);
 
   // Auto-resolve table from QR token in URL
   useQuery({
@@ -30,11 +34,13 @@ export default function MenuView() {
 
   const orderMutation = useMutation({
     mutationFn: (data) => api.post("/orders", data),
-    onSuccess: () => {
+    onSuccess: (response) => {
+      setLastOrder(response.data);
       setCart([]);
       setShowCart(false);
       setOrderSuccess(true);
-      setTimeout(() => setOrderSuccess(false), 3000);
+      setConfettiActive(true);
+      setTimeout(() => setConfettiActive(false), 4000);
     },
   });
 
@@ -117,26 +123,45 @@ export default function MenuView() {
               <p className="text-sm text-gray-500">Table {tableNumber}</p>
             )}
           </div>
-          <button
-            onClick={() => setShowCart(true)}
-            className="relative bg-gray-900 text-white px-4 py-2 rounded-lg text-sm"
-          >
-            Panier
-            {cart.length > 0 && (
-              <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
-                {cart.reduce((s, c) => s + c.quantity, 0)}
-              </span>
-            )}
-          </button>
+          {!orderSuccess && (
+            <button
+              onClick={() => setShowCart(true)}
+              className="relative bg-gray-900 text-white px-4 py-2 rounded-lg text-sm"
+            >
+              Panier
+              {cart.length > 0 && (
+                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
+                  {cart.reduce((s, c) => s + c.quantity, 0)}
+                </span>
+              )}
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Success message */}
-      {orderSuccess && (
+      {/* Confetti */}
+      <Confetti active={confettiActive} />
+
+      {/* Order tracking / Success */}
+      {orderSuccess && lastOrder && (
         <div className="max-w-lg mx-auto px-4 mt-4">
-          <div className="bg-green-50 text-green-700 px-4 py-3 rounded-lg text-sm font-medium">
-            Commande envoyée avec succès !
-          </div>
+          <OrderTracking
+            orderId={lastOrder._id}
+            restaurantId={restaurant._id}
+            currentStatus={lastOrder.status}
+            tableNumber={tableNumber}
+            total={lastOrder.totalPrice}
+            items={lastOrder.items}
+          />
+          <button
+            onClick={() => {
+              setOrderSuccess(false);
+              setLastOrder(null);
+            }}
+            className="w-full mt-3 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm hover:bg-gray-200 transition-colors"
+          >
+            Commander à nouveau
+          </button>
         </div>
       )}
 
@@ -174,42 +199,44 @@ export default function MenuView() {
         </div>
       )}
 
-      {/* Menu */}
-      <div className="max-w-lg mx-auto px-4 mt-4">
-        {restaurant.menu?.map((cat) => (
-          <div key={cat._id} className="mb-6">
-            <h2 className="text-lg font-bold text-gray-800 mb-3 sticky top-16 bg-gray-50 py-1">
-              {cat.name}
-            </h2>
-            <div className="space-y-2">
-              {cat.items?.map((item) => (
-                <div
-                  key={item._id}
-                  className="bg-white rounded-xl shadow-sm p-4 flex items-center gap-3"
-                >
-                  <div className="flex-1">
-                    <h3 className="font-medium text-gray-800">{item.name}</h3>
-                    {item.description && (
-                      <p className="text-sm text-gray-500 mt-0.5">
-                        {item.description}
-                      </p>
-                    )}
-                    <p className="text-sm font-semibold text-gray-900 mt-1">
-                      {item.price.toFixed(2)} €
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => addToCart(item)}
-                    className="bg-gray-900 text-white w-8 h-8 rounded-full flex items-center justify-center text-lg"
+      {/* Menu — hide when showing order tracking */}
+      {!orderSuccess && (
+        <div className="max-w-lg mx-auto px-4 mt-4">
+          {restaurant.menu?.map((cat) => (
+            <div key={cat._id} className="mb-6">
+              <h2 className="text-lg font-bold text-gray-800 mb-3 sticky top-16 bg-gray-50 py-1">
+                {cat.name}
+              </h2>
+              <div className="space-y-2">
+                {cat.items?.map((item) => (
+                  <div
+                    key={item._id}
+                    className="bg-white rounded-xl shadow-sm p-4 flex items-center gap-3"
                   >
-                    +
-                  </button>
-                </div>
-              ))}
+                    <div className="flex-1">
+                      <h3 className="font-medium text-gray-800">{item.name}</h3>
+                      {item.description && (
+                        <p className="text-sm text-gray-500 mt-0.5">
+                          {item.description}
+                        </p>
+                      )}
+                      <p className="text-sm font-semibold text-gray-900 mt-1">
+                        {item.price.toFixed(2)} €
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => addToCart(item)}
+                      className="bg-gray-900 text-white w-8 h-8 rounded-full flex items-center justify-center text-lg"
+                    >
+                      +
+                    </button>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       {/* Cart drawer */}
       {showCart && (

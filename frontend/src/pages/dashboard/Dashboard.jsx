@@ -23,6 +23,12 @@ export default function Dashboard() {
     enabled: !!restaurantId,
   });
 
+  const { data: popularReviews = [] } = useQuery({
+    queryKey: ["reviews", "popular", restaurantId],
+    queryFn: () => api.get(`/reviews/popular/${restaurantId}`).then((r) => r.data),
+    enabled: !!restaurantId,
+  });
+
   const allOrders = orders || [];
   const todayOrders = allOrders.filter((o) => {
     const orderDate = new Date(o.createdAt).toISOString().split("T")[0];
@@ -92,12 +98,11 @@ export default function Dashboard() {
       </div>
 
       {/* Popular items */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-white rounded-xl shadow-sm p-4">
           <h2 className="font-semibold text-gray-700 mb-3">
             Plats les plus commandés
-          </h2>
-          {popularItems.length === 0 ? (
+          </h2>{popularItems.length === 0 ? (
             <p className="text-gray-400 text-sm">Aucune donnée</p>
           ) : (
             <div className="space-y-2">
@@ -121,6 +126,37 @@ export default function Dashboard() {
                         )}%`,
                       }}
                     />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm p-4">
+          <h2 className="font-semibold text-gray-700 mb-3">
+            ⭐ Meilleures notes clients
+          </h2>
+          {popularReviews.length === 0 ? (
+            <p className="text-gray-400 text-sm">Aucun avis pour le moment</p>
+          ) : (
+            <div className="space-y-3">
+              {popularReviews.map((item) => (
+                <div key={item.menuItemId} className="flex items-center gap-3">
+                  <div className="flex-1">
+                    <span className="text-sm text-gray-700">{item.name}</span>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="text-yellow-400 text-sm">
+                        {"★".repeat(Math.round(item.avgRating))}
+                        {"☆".repeat(5 - Math.round(item.avgRating))}
+                      </span>
+                      <span className="text-xs font-semibold text-gray-600">
+                        {item.avgRating}
+                      </span>
+                      <span className="text-xs text-gray-400">
+                        ({item.count} avis)
+                      </span>
+                    </div>
                   </div>
                 </div>
               ))}
