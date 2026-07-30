@@ -144,13 +144,13 @@ export default function MenuView() {
       {!tableId && !token && (
         <div className="max-w-lg mx-auto px-4 mt-4">
           <div className="bg-white rounded-xl shadow-sm p-4">
-            <h2 className="font-semibold text-gray-700 mb-2">Numéro de token de table</h2>
+            <h2 className="font-semibold text-gray-700 mb-2">Scannez le QR code sur votre table</h2>
             <div className="flex gap-2">
               <input
                 type="text"
                 value={tableNumber || ""}
                 onChange={(e) => setTableNumber(e.target.value)}
-                placeholder="Token de table (via QR code)"
+                placeholder="Ou entrez le token manuellement"
                 className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
               />
               <button

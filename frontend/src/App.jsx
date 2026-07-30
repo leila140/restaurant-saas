@@ -5,11 +5,13 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import Layout from "./components/Layout";
 import MenuView from "./pages/public/MenuView";
 import Login from "./pages/auth/Login";
+import Register from "./pages/auth/Register";
 import Dashboard from "./pages/dashboard/Dashboard";
 import MenuManager from "./pages/dashboard/MenuManager";
 import OrdersView from "./pages/dashboard/OrdersView";
 import TablesView from "./pages/dashboard/TablesView";
 import ReservationsView from "./pages/dashboard/ReservationsView";
+import StaffManager from "./pages/dashboard/StaffManager";
 
 const queryClient = new QueryClient();
 
@@ -33,6 +35,7 @@ function App() {
 
             {/* Auth */}
             <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
 
             {/* Dashboard (protected) */}
             <Route
@@ -55,6 +58,14 @@ function App() {
               <Route path="orders" element={<OrdersView />} />
               <Route path="tables" element={<TablesView />} />
               <Route path="reservations" element={<ReservationsView />} />
+              <Route
+                path="staff"
+                element={
+                  <ProtectedRoute allowedRoles={["owner"]}>
+                    <StaffManager />
+                  </ProtectedRoute>
+                }
+              />
             </Route>
 
             {/* 404 */}

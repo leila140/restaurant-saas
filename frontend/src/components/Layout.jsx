@@ -8,6 +8,7 @@ const navItems = {
     { to: "/dashboard/orders", label: "Commandes", icon: "📋" },
     { to: "/dashboard/tables", label: "Tables", icon: "🪑" },
     { to: "/dashboard/reservations", label: "Réservations", icon: "📅" },
+    { to: "/dashboard/staff", label: "Équipe", icon: "👥" },
   ],
   manager: [
     { to: "/dashboard", label: "Dashboard", icon: "📊" },
