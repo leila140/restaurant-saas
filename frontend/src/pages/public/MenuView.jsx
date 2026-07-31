@@ -6,6 +6,25 @@ import api from "../../services/api";
 import Confetti from "../../components/Confetti";
 import OrderTracking from "../../components/OrderTracking";
 
+const EMOJI_RULES = [
+  [/entr|salade|salad|crudit/i, "🥗"],
+  [/pizza/i, "🍕"],
+  [/burger|sandwich/i, "🍔"],
+  [/pasta|pâte|pates/i, "🍝"],
+  [/grill|poulet|viande|steak|poisson/i, "🍖"],
+  [/soupe|soup/i, "🍜"],
+  [/frite|frites/i, "🍟"],
+  [/dessert|gâteau|gateau|tarte|crème|creme|cake/i, "🍰"],
+  [/boisson|drink|soda|jus|thé|the |café|cafe|bière|vin/i, "🥤"],
+];
+
+const dishEmoji = (name = "") => {
+  for (const [rule, emoji] of EMOJI_RULES) {
+    if (rule.test(name)) return emoji;
+  }
+  return "🍽️";
+};
+
 export default function MenuView() {
   const { slug, token } = useParams();
   const [cart, setCart] = useState([]);
@@ -108,6 +127,8 @@ export default function MenuView() {
   };
 
   const total = cart.reduce((sum, c) => sum + c.price * c.quantity, 0);
+  const qtyOf = (menuItemId) =>
+    cart.find((c) => c.menuItemId === menuItemId)?.quantity || 0;
 
   const handleOrder = () => {
     if (!tableId || cart.length === 0) return;
@@ -135,31 +156,46 @@ export default function MenuView() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20">
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-emerald-50/40 pb-28">
       {/* Header */}
-      <div className="bg-white shadow-sm sticky top-0 z-10">
-        <div className="max-w-lg mx-auto px-4 py-4 flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-bold text-gray-800">{restaurant.name}</h1>
-            {tableNumber && (
-              <p className="text-sm text-gray-500">Table {tableNumber}</p>
-            )}
-          </div>
-          {!orderSuccess && (
-            <button
-              onClick={() => setShowCart(true)}
-              className="relative bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm"
-            >
-              Panier
-              {cart.length > 0 && (
-                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
-                  {cart.reduce((s, c) => s + c.quantity, 0)}
-                </span>
+      <div className="bg-white/90 backdrop-blur-md border-b border-gray-100 shadow-sm sticky top-0 z-10">
+        <div className="max-w-lg mx-auto px-4 py-3.5 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <span className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white flex items-center justify-center text-lg shadow-sm">
+              🍽️
+            </span>
+            <div>
+              <h1 className="text-lg font-bold text-gray-900 leading-tight">
+                {restaurant.name}
+              </h1>
+              {tableNumber && (
+                <p className="text-[11px] text-emerald-600 font-semibold">
+                  Table {tableNumber}
+                </p>
               )}
-            </button>
-          )}
+            </div>
+          </div>
         </div>
       </div>
+
+      {/* Hero */}
+      {!orderSuccess && (
+        <div className="relative overflow-hidden bg-gradient-to-br from-emerald-600 via-emerald-600 to-teal-700 text-white">
+          <div className="absolute -right-10 -top-10 w-40 h-40 rounded-full bg-white/10" />
+          <div className="absolute -bottom-16 -left-8 w-48 h-48 rounded-full bg-white/10" />
+          <div className="relative max-w-lg mx-auto px-4 py-7">
+            <p className="text-emerald-100 text-[11px] font-semibold uppercase tracking-widest">
+              {tableNumber ? `Bienvenue · Table ${tableNumber}` : "Bienvenue"}
+            </p>
+            <h2 className="text-2xl font-bold mt-1">
+              Commandez depuis votre table
+            </h2>
+            <p className="text-emerald-100 text-sm mt-1.5">
+              Ajoutez vos plats au panier et suivez votre commande en temps réel.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Confetti */}
       <Confetti active={confettiActive} />
@@ -191,15 +227,15 @@ export default function MenuView() {
       {/* Table selection — only show if no QR token in URL */}
       {!tableId && !token && (
         <div className="max-w-lg mx-auto px-4 mt-4">
-          <div className="bg-white rounded-xl shadow-sm p-4">
-            <h2 className="font-semibold text-gray-700 mb-2">Scannez le QR code sur votre table</h2>
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+            <h2 className="font-semibold text-gray-800 mb-3">Scannez le QR code sur votre table</h2>
             <div className="flex flex-col sm:flex-row gap-2">
               <input
                 type="text"
                 value={tableNumber || ""}
                 onChange={(e) => setTableNumber(e.target.value)}
                 placeholder="Ou entrez le token manuellement"
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                className="flex-1 px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
               <button
                 onClick={() => {
@@ -213,7 +249,7 @@ export default function MenuView() {
                       .catch(() => toast.error("Table introuvable"));
                   }
                 }}
-                className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm"
+                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-medium transition-colors"
               >
                 Valider
               </button>
@@ -224,40 +260,85 @@ export default function MenuView() {
 
       {/* Menu — hide when showing order tracking */}
       {!orderSuccess && (
-        <div className="max-w-lg mx-auto px-4 mt-4">
+        <div className="max-w-lg mx-auto px-4 mt-6">
           {restaurant.menu?.map((cat) => (
-            <div key={cat._id} className="mb-6">
-              <h2 className="text-lg font-bold text-gray-800 mb-3 sticky top-16 bg-gray-50 py-1">
-                {cat.name}
-              </h2>
-              <div className="space-y-2">
-                {cat.items?.map((item) => (
-                  <div
-                    key={item._id}
-                    className="bg-white rounded-xl shadow-sm p-4 flex items-center gap-3"
-                  >
-                    <div className="flex-1">
-                      <h3 className="font-medium text-gray-800">{item.name}</h3>
-                      {item.description && (
-                        <p className="text-sm text-gray-500 mt-0.5">
-                          {item.description}
-                        </p>
-                      )}
-                      <p className="text-sm font-semibold text-gray-900 mt-1">
-                        {item.price.toFixed(2)} €
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => addToCart(item)}
-                      className="bg-emerald-600 text-white w-8 h-8 rounded-full flex items-center justify-center text-lg"
+            <div key={cat._id} className="mb-8">
+              <div className="flex items-center gap-2.5 mb-3">
+                <span className="w-9 h-9 rounded-xl bg-white border border-emerald-100 text-lg flex items-center justify-center shadow-sm">
+                  {dishEmoji(cat.name)}
+                </span>
+                <h2 className="text-base font-bold text-gray-900">{cat.name}</h2>
+                <div className="flex-1 h-px bg-gray-200" />
+                <span className="text-xs text-gray-400">
+                  {cat.items?.length || 0} plat
+                  {cat.items?.length > 1 ? "s" : ""}
+                </span>
+              </div>
+              <div className="space-y-2.5">
+                {cat.items?.map((item) => {
+                  const inCart = qtyOf(item._id) > 0;
+                  return (
+                    <div
+                      key={item._id}
+                      className="animate-fade-up bg-white rounded-2xl border border-gray-100 p-4 flex items-center gap-3 hover:border-emerald-200 hover:shadow-lg hover:-translate-y-0.5 transition-all"
                     >
-                      +
-                    </button>
-                  </div>
-                ))}
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-gray-900">
+                          {item.name}
+                        </h3>
+                        {item.description && (
+                          <p className="text-sm text-gray-500 mt-0.5">
+                            {item.description}
+                          </p>
+                        )}
+                        <div className="flex items-center gap-1.5 mt-1.5">
+                          <p className="font-bold text-emerald-700">
+                            {item.price.toFixed(2)} €
+                          </p>
+                          {item.prepTimeMinutes > 0 && (
+                            <span className="text-[11px] text-gray-400">
+                              · {item.prepTimeMinutes} min
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      {inCart ? (
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => updateQuantity(item._id, -1)}
+                            className="w-8 h-8 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-lg leading-none shadow-sm transition-all active:scale-90"
+                          >
+                            −
+                          </button>
+                          <span className="w-5 text-center text-sm font-bold text-gray-800">
+                            {qtyOf(item._id)}
+                          </span>
+                          <button
+                            onClick={() => updateQuantity(item._id, 1)}
+                            className="w-8 h-8 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-lg leading-none shadow-sm transition-all active:scale-90"
+                          >
+                            +
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => addToCart(item)}
+                          className="w-9 h-9 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white text-xl flex items-center justify-center shadow-sm transition-all active:scale-90"
+                        >
+                          +
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           ))}
+          {restaurant.menu?.length === 0 && (
+            <p className="text-center text-gray-400 py-12">
+              Le menu est en cours de préparation...
+            </p>
+          )}
         </div>
       )}
 
@@ -265,15 +346,15 @@ export default function MenuView() {
       {showCart && (
         <div className="fixed inset-0 z-20">
           <div
-            className="absolute inset-0 bg-black/50"
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
             onClick={() => setShowCart(false)}
           />
-          <div className="absolute right-0 top-0 h-full w-full max-w-md bg-white shadow-xl flex flex-col">
-            <div className="p-4 border-b flex items-center justify-between">
-              <h2 className="text-lg font-bold">Panier</h2>
+          <div className="absolute right-0 top-0 h-full w-full max-w-md bg-white shadow-xl flex flex-col sm:rounded-l-3xl">
+            <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+              <h2 className="text-lg font-bold text-gray-900">Panier</h2>
               <button
                 onClick={() => setShowCart(false)}
-                className="text-gray-500 text-2xl"
+                className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 flex items-center justify-center text-lg transition-colors"
               >
                 ×
               </button>
@@ -285,24 +366,26 @@ export default function MenuView() {
                 </p>
               )}
               {cart.map((item) => (
-                <div key={item.menuItemId} className="bg-gray-50 rounded-lg p-3">
+                <div key={item.menuItemId} className="bg-gray-50 rounded-2xl p-3">
                   <div className="flex items-center justify-between">
                     <span className="font-medium text-gray-800">{item.name}</span>
-                    <span className="font-semibold">
+                    <span className="font-semibold text-gray-900">
                       {(item.price * item.quantity).toFixed(2)} €
                     </span>
                   </div>
                   <div className="flex items-center gap-2 mt-2">
                     <button
                       onClick={() => updateQuantity(item.menuItemId, -1)}
-                      className="w-7 h-7 bg-gray-200 rounded-full text-sm"
+                      className="w-7 h-7 rounded-full bg-white border border-gray-200 text-gray-600 text-sm hover:border-emerald-500 hover:text-emerald-600 transition-colors"
                     >
                       −
                     </button>
-                    <span className="w-6 text-center text-sm">{item.quantity}</span>
+                    <span className="w-6 text-center text-sm font-medium">
+                      {item.quantity}
+                    </span>
                     <button
                       onClick={() => updateQuantity(item.menuItemId, 1)}
-                      className="w-7 h-7 bg-gray-200 rounded-full text-sm"
+                      className="w-7 h-7 rounded-full bg-white border border-gray-200 text-gray-600 text-sm hover:border-emerald-500 hover:text-emerald-600 transition-colors"
                     >
                       +
                     </button>
@@ -313,22 +396,24 @@ export default function MenuView() {
                         updateNotes(item.menuItemId, e.target.value)
                       }
                       placeholder="Notes..."
-                      className="flex-1 ml-2 px-2 py-1 border border-gray-300 rounded text-xs"
+                      className="flex-1 ml-2 px-2 py-1 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500"
                     />
                   </div>
                 </div>
               ))}
             </div>
             {cart.length > 0 && (
-              <div className="p-4 border-t">
-                <div className="flex justify-between mb-3">
-                  <span className="font-semibold text-gray-700">Total</span>
-                  <span className="font-bold text-lg">{total.toFixed(2)} €</span>
+              <div className="p-4 border-t border-gray-100">
+                <div className="flex justify-between items-center mb-3">
+                  <span className="font-medium text-gray-700">Total</span>
+                  <span className="font-bold text-xl text-emerald-700">
+                    {total.toFixed(2)} €
+                  </span>
                 </div>
                 <button
                   onClick={handleOrder}
                   disabled={!tableId || orderMutation.isPending}
-                  className="w-full py-3 bg-emerald-600 text-white rounded-lg font-medium disabled:opacity-50"
+                  className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-semibold disabled:opacity-50 transition-colors"
                 >
                   {orderMutation.isPending ? "Envoi..." : "Confirmer la commande"}
                 </button>
@@ -339,6 +424,28 @@ export default function MenuView() {
                 )}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Floating cart bar */}
+      {!orderSuccess && cart.length > 0 && (
+        <div className="fixed bottom-0 inset-x-0 z-20 p-4 bg-gradient-to-t from-white via-white/70 to-transparent pointer-events-none">
+          <div className="max-w-lg mx-auto pointer-events-auto">
+            <button
+              onClick={() => setShowCart(true)}
+              className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-2xl shadow-xl shadow-emerald-600/30 py-3.5 px-5 flex items-center justify-between font-semibold transition-all active:scale-[0.98]"
+            >
+              <span className="flex items-center gap-2.5">
+                <span className="w-6 h-6 rounded-full bg-white text-emerald-700 text-xs font-bold flex items-center justify-center">
+                  {cart.reduce((s, c) => s + c.quantity, 0)}
+                </span>
+                Voir le panier
+              </span>
+              <span className="flex items-center gap-1.5">
+                {total.toFixed(2)} € <span>→</span>
+              </span>
+            </button>
           </div>
         </div>
       )}
