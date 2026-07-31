@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import toast from "react-hot-toast";
 import api from "../../services/api";
 import Confetti from "../../components/Confetti";
 import OrderTracking from "../../components/OrderTracking";
@@ -11,9 +12,27 @@ export default function MenuView() {
   const [tableId, setTableId] = useState(null);
   const [tableNumber, setTableNumber] = useState(null);
   const [showCart, setShowCart] = useState(false);
-  const [orderSuccess, setOrderSuccess] = useState(false);
   const [confettiActive, setConfettiActive] = useState(false);
-  const [lastOrder, setLastOrder] = useState(null);
+
+  const orderStorageKey = `lastOrder:${token}`;
+  const getStoredOrder = () => {
+    try {
+      const saved = localStorage.getItem(orderStorageKey);
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  };
+
+  const [lastOrder, setLastOrder] = useState(getStoredOrder);
+  const [orderSuccess, setOrderSuccess] = useState(() => !!getStoredOrder());
+
+  const { data: liveOrder } = useQuery({
+    queryKey: ["order-status", lastOrder?._id],
+    queryFn: () => api.get(`/orders/${lastOrder._id}/track`).then((r) => r.data),
+    enabled: !!lastOrder?._id,
+    refetchInterval: 15000,
+  });
 
   // Auto-resolve table from QR token in URL
   useQuery({
@@ -21,7 +40,7 @@ export default function MenuView() {
     queryFn: () =>
       api.get(`/tables/token/${token}`).then((r) => {
         setTableId(r.data._id);
-        setTableNumber(`Table ${r.data.number}`);
+        setTableNumber(r.data.number);
         return r.data;
       }),
     enabled: !!token,
@@ -36,12 +55,15 @@ export default function MenuView() {
     mutationFn: (data) => api.post("/orders", data),
     onSuccess: (response) => {
       setLastOrder(response.data);
+      localStorage.setItem(orderStorageKey, JSON.stringify(response.data));
       setCart([]);
       setShowCart(false);
       setOrderSuccess(true);
       setConfettiActive(true);
+      toast.success("Commande envoyée en cuisine !");
       setTimeout(() => setConfettiActive(false), 4000);
     },
+    onError: () => toast.error("Erreur lors de l'envoi de la commande"),
   });
 
   const addToCart = (item) => {
@@ -148,13 +170,14 @@ export default function MenuView() {
           <OrderTracking
             orderId={lastOrder._id}
             restaurantId={restaurant._id}
-            currentStatus={lastOrder.status}
-            tableNumber={tableNumber}
-            total={lastOrder.totalPrice}
+            currentStatus={liveOrder?.status || lastOrder.status}
+            tableNumber={tableNumber || liveOrder?.tableNumber}
+            total={liveOrder?.totalPrice ?? lastOrder.totalPrice}
             items={lastOrder.items}
           />
           <button
             onClick={() => {
+              localStorage.removeItem(orderStorageKey);
               setOrderSuccess(false);
               setLastOrder(null);
             }}
@@ -185,9 +208,9 @@ export default function MenuView() {
                       .get(`/tables/token/${tableNumber}`)
                       .then((r) => {
                         setTableId(r.data._id);
-                        setTableNumber(`Table ${r.data.number}`);
+                        setTableNumber(r.data.number);
                       })
-                      .catch(() => alert("Table introuvable"));
+                      .catch(() => toast.error("Table introuvable"));
                   }
                 }}
                 className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm"

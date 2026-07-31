@@ -1,9 +1,15 @@
+const mongoose = require("mongoose");
 const Review = require("../models/Review");
 
 exports.createReview = async (req, res) => {
   try {
-    const { restaurantId, menuItemId, orderId, tableNumber, rating, comment } =
-      req.body;
+    const { restaurantId, menuItemId, orderId, rating, comment } = req.body;
+    let { tableNumber } = req.body;
+
+    if (typeof tableNumber === "string") {
+      const match = tableNumber.match(/\d+/);
+      tableNumber = match ? parseInt(match[0], 10) : undefined;
+    }
 
     if (!restaurantId || !menuItemId || !orderId || !rating) {
       return res.status(400).json({ error: "Missing required fields" });
@@ -38,8 +44,15 @@ exports.createReview = async (req, res) => {
 
 exports.getPopularItems = async (req, res) => {
   try {
+    const restaurantId = mongoose.Types.ObjectId.isValid(req.restaurantId)
+      ? new mongoose.Types.ObjectId(req.restaurantId)
+      : null;
+    if (!restaurantId) {
+      return res.status(400).json({ error: "Invalid restaurantId" });
+    }
+
     const stats = await Review.aggregate([
-      { $match: { restaurantId: req.restaurantId } },
+      { $match: { restaurantId } },
       {
         $group: {
           _id: "$menuItemId",

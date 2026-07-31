@@ -1,17 +1,17 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import toast from "react-hot-toast";
 import api from "../../services/api";
+import EmptyState from "../../components/EmptyState";
+import { SkeletonCard } from "../../components/Skeleton";
+import { useAuth } from "../../context/AuthContext";
 
 export default function MenuManager() {
   const queryClient = useQueryClient();
-  const [restaurantId, setRestaurantId] = useState(null);
+  const { user } = useAuth();
+  const restaurantId = user?.restaurantId;
 
-  useEffect(() => {
-    const user = JSON.parse(localStorage.getItem("user"));
-    if (user?.restaurantId) setRestaurantId(user.restaurantId);
-  }, []);
-
-  const { data: menu = [] } = useQuery({
+  const { data: menu = [], isLoading } = useQuery({
     queryKey: ["menu", restaurantId],
     queryFn: () => api.get(`/menu/${restaurantId}`).then((r) => r.data),
     enabled: !!restaurantId,
@@ -20,7 +20,11 @@ export default function MenuManager() {
   const createCategory = useMutation({
     mutationFn: (data) =>
       api.post(`/menu/${restaurantId}/categories`, data),
-    onSuccess: () => queryClient.invalidateQueries(["menu", restaurantId]),
+    onSuccess: () => {
+      queryClient.invalidateQueries(["menu", restaurantId]);
+      toast.success("Catégorie ajoutée");
+    },
+    onError: () => toast.error("Erreur lors de l'ajout"),
   });
 
   const updateCategory = useMutation({
@@ -31,23 +35,39 @@ export default function MenuManager() {
 
   const deleteCategory = useMutation({
     mutationFn: (id) => api.delete(`/menu/${restaurantId}/categories/${id}`),
-    onSuccess: () => queryClient.invalidateQueries(["menu", restaurantId]),
+    onSuccess: () => {
+      queryClient.invalidateQueries(["menu", restaurantId]);
+      toast.success("Catégorie supprimée");
+    },
+    onError: () => toast.error("Erreur lors de la suppression"),
   });
 
   const createItem = useMutation({
     mutationFn: (data) => api.post(`/menu/${restaurantId}/items`, data),
-    onSuccess: () => queryClient.invalidateQueries(["menu", restaurantId]),
+    onSuccess: () => {
+      queryClient.invalidateQueries(["menu", restaurantId]);
+      toast.success("Plat ajouté");
+    },
+    onError: () => toast.error("Erreur lors de l'ajout du plat"),
   });
 
   const updateItem = useMutation({
     mutationFn: ({ id, ...data }) =>
       api.put(`/menu/${restaurantId}/items/${id}`, data),
-    onSuccess: () => queryClient.invalidateQueries(["menu", restaurantId]),
+    onSuccess: () => {
+      queryClient.invalidateQueries(["menu", restaurantId]);
+      toast.success("Plat modifié");
+    },
+    onError: () => toast.error("Erreur lors de la modification"),
   });
 
   const deleteItem = useMutation({
     mutationFn: (id) => api.delete(`/menu/${restaurantId}/items/${id}`),
-    onSuccess: () => queryClient.invalidateQueries(["menu", restaurantId]),
+    onSuccess: () => {
+      queryClient.invalidateQueries(["menu", restaurantId]);
+      toast.success("Plat supprimé");
+    },
+    onError: () => toast.error("Erreur lors de la suppression"),
   });
 
   const [newCatName, setNewCatName] = useState("");
@@ -129,7 +149,20 @@ export default function MenuManager() {
       </div>
 
       {/* Categories & Items */}
-      {menu.map((cat) => (
+      {isLoading ? (
+        <div className="space-y-4">
+          {[0, 1, 2].map((i) => (
+            <SkeletonCard key={i} />
+          ))}
+        </div>
+      ) : menu.length === 0 ? (
+        <EmptyState
+          icon="🍽️"
+          title="Aucune catégorie"
+          subtitle="Ajoute ta première catégorie de plats pour commencer"
+        />
+      ) : (
+        menu.map((cat) => (
         <div key={cat._id} className="bg-white rounded-xl shadow-sm p-4 mb-4">
           <div className="flex items-center justify-between mb-3">
             <h2 className="font-semibold text-gray-700 text-lg">{cat.name}</h2>
@@ -312,8 +345,9 @@ export default function MenuManager() {
               + Ajouter un plat
             </button>
           )}
-        </div>
-      ))}
+          </div>
+        ))
+      )}
     </div>
   );
 }

@@ -1,7 +1,10 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import toast from "react-hot-toast";
 import api from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
+import EmptyState from "../../components/EmptyState";
+import { SkeletonGrid } from "../../components/Skeleton";
 
 const statusColors = {
   free: "bg-green-100 border-green-300 text-green-700",
@@ -32,7 +35,9 @@ export default function TablesView() {
       queryClient.invalidateQueries(["tables", restaurantId]);
       setNewNumber("");
       setNewCapacity(4);
+      toast.success("Table ajoutée");
     },
+    onError: () => toast.error("Erreur lors de l'ajout"),
   });
 
   const updateMutation = useMutation({
@@ -40,12 +45,18 @@ export default function TablesView() {
     onSuccess: () => {
       queryClient.invalidateQueries(["tables", restaurantId]);
       setEditId(null);
+      toast.success("Table modifiée");
     },
+    onError: () => toast.error("Erreur lors de la modification"),
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id) => api.delete(`/tables/${id}`),
-    onSuccess: () => queryClient.invalidateQueries(["tables", restaurantId]),
+    onSuccess: () => {
+      queryClient.invalidateQueries(["tables", restaurantId]);
+      toast.success("Table supprimée");
+    },
+    onError: () => toast.error("Erreur lors de la suppression"),
   });
 
   const qrMutation = useMutation({
@@ -69,8 +80,8 @@ export default function TablesView() {
 
   if (isLoading) {
     return (
-      <div className="p-6 flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900" />
+      <div className="p-4 sm:p-6">
+        <SkeletonGrid count={6} className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4" />
       </div>
     );
   }
@@ -106,6 +117,13 @@ export default function TablesView() {
       </div>
 
       {/* Tables grid */}
+      {tables.length === 0 ? (
+        <EmptyState
+          icon="🪑"
+          title="Aucune table"
+          subtitle="Ajoute ta première table pour générer son QR code"
+        />
+      ) : (
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
         {tables.map((table) => (
           <div
@@ -182,6 +200,7 @@ export default function TablesView() {
           </div>
         ))}
       </div>
+      )}
 
       {/* QR Modal */}
       {showQR && (

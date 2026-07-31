@@ -1,8 +1,11 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import toast from "react-hot-toast";
 import api from "../../services/api";
 import useSocket from "../../hooks/useSocket";
 import { useAuth } from "../../context/AuthContext";
+import EmptyState from "../../components/EmptyState";
+import { SkeletonCard } from "../../components/Skeleton";
 
 const statusColors = {
   pending: "bg-yellow-100 border-yellow-300 text-yellow-800",
@@ -77,9 +80,12 @@ export default function OrdersView() {
   const statusMutation = useMutation({
     mutationFn: ({ id, status }) =>
       api.patch(`/orders/${id}/status`, { status }),
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries(["orders", restaurantId]);
+      const labels = { preparing: "En préparation", ready: "Prêt", served: "Servi", paid: "Payé", cancelled: "Annulé" };
+      toast.success(`Statut mis à jour : ${labels[variables.status] || variables.status}`);
     },
+    onError: () => toast.error("Erreur lors du changement de statut"),
   });
 
   useEffect(() => {
@@ -237,8 +243,10 @@ export default function OrdersView() {
 
   if (isLoading) {
     return (
-      <div className="p-6 flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900" />
+      <div className="p-4 sm:p-6 grid grid-cols-1 md:grid-cols-2 gap-3">
+        {[0, 1, 2, 3].map((i) => (
+          <SkeletonCard key={i} />
+        ))}
       </div>
     );
   }
@@ -324,11 +332,11 @@ export default function OrdersView() {
         )}
 
         {filteredOrders.length === 0 && (
-          <div className="text-center py-16">
-            <p className="text-gray-400 text-lg">
-              Aucune commande pour le moment
-            </p>
-          </div>
+          <EmptyState
+            icon="📋"
+            title="Aucune commande pour le moment"
+            subtitle="Les nouvelles commandes apparaîtront ici en temps réel"
+          />
         )}
       </div>
     </div>

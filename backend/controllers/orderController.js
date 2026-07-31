@@ -121,3 +121,22 @@ exports.getOrder = async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 };
+
+// Public: track order status (no auth)
+exports.getOrderStatus = async (req, res) => {
+  try {
+    const order = await Order.findById(req.params.id).populate("tableId", "number");
+
+    if (!order) return res.status(404).json({ error: "Order not found" });
+
+    res.json({
+      _id: order._id,
+      status: order.status,
+      totalPrice: order.totalPrice,
+      tableNumber: order.tableId?.number,
+      items: order.items,
+    });
+  } catch (err) {
+    res.status(500).json({ error: "Internal server error" });
+  }
+};

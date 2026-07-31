@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import toast from "react-hot-toast";
 import api from "../../services/api";
+import EmptyState from "../../components/EmptyState";
+import { SkeletonCard } from "../../components/Skeleton";
 
 const roleLabels = {
   owner: "Propriétaire",
@@ -33,20 +36,30 @@ export default function StaffManager() {
       setShowForm(false);
       setForm({ name: "", email: "", password: "", role: "server" });
       setError("");
+      toast.success("Membre ajouté");
     },
     onError: (err) => {
       setError(err.response?.data?.error || "Erreur");
+      toast.error(err.response?.data?.error || "Erreur lors de la création");
     },
   });
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => api.put(`/auth/staff/${id}`, data),
-    onSuccess: () => queryClient.invalidateQueries(["staff"]),
+    onSuccess: () => {
+      queryClient.invalidateQueries(["staff"]);
+      toast.success("Membre mis à jour");
+    },
+    onError: () => toast.error("Erreur lors de la mise à jour"),
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id) => api.delete(`/auth/staff/${id}`),
-    onSuccess: () => queryClient.invalidateQueries(["staff"]),
+    onSuccess: () => {
+      queryClient.invalidateQueries(["staff"]);
+      toast.success("Membre supprimé");
+    },
+    onError: () => toast.error("Erreur lors de la suppression"),
   });
 
   const handleSubmit = (e) => {
@@ -63,8 +76,10 @@ export default function StaffManager() {
 
   if (isLoading) {
     return (
-      <div className="p-6 flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900" />
+      <div className="p-4 sm:p-6 max-w-3xl mx-auto space-y-3">
+        {[0, 1, 2].map((i) => (
+          <SkeletonCard key={i} />
+        ))}
       </div>
     );
   }
@@ -210,11 +225,11 @@ export default function StaffManager() {
           </div>
         ))}
         {staff.length === 0 && (
-          <div className="text-center py-16">
-            <p className="text-gray-400 text-lg">
-              Aucun membre dans l'équipe
-            </p>
-          </div>
+          <EmptyState
+            icon="👥"
+            title="Aucun membre dans l'équipe"
+            subtitle="Ajoute ton premier membre pour commencer"
+          />
         )}
       </div>
     </div>

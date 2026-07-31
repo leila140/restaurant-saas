@@ -49,7 +49,7 @@ export default function OrderTracking({ orderId, restaurantId, currentStatus, ta
             Commande confirmée !
           </h2>
           <p className="text-sm text-gray-500">
-            {tableNumber} · {total.toFixed(2)} €
+            Table {tableNumber} · {total.toFixed(2)} €
           </p>
         </div>
       </div>

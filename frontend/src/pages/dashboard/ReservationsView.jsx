@@ -1,7 +1,10 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import toast from "react-hot-toast";
 import api from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
+import EmptyState from "../../components/EmptyState";
+import { SkeletonCard } from "../../components/Skeleton";
 
 export default function ReservationsView() {
   const { user } = useAuth();
@@ -34,7 +37,9 @@ export default function ReservationsView() {
     onSuccess: () => {
       queryClient.invalidateQueries(["reservations", restaurantId]);
       queryClient.invalidateQueries(["tables", restaurantId]);
+      toast.success("Réservation mise à jour");
     },
+    onError: () => toast.error("Erreur lors de la mise à jour"),
   });
 
   const deleteMutation = useMutation({
@@ -42,7 +47,9 @@ export default function ReservationsView() {
     onSuccess: () => {
       queryClient.invalidateQueries(["reservations", restaurantId]);
       queryClient.invalidateQueries(["tables", restaurantId]);
+      toast.success("Réservation supprimée");
     },
+    onError: () => toast.error("Erreur lors de la suppression"),
   });
 
   const handleAssignTable = (reservationId, tableId) => {
@@ -60,8 +67,10 @@ export default function ReservationsView() {
 
   if (isLoading) {
     return (
-      <div className="p-6 flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900" />
+      <div className="p-4 sm:p-6 space-y-3">
+        {[0, 1, 2].map((i) => (
+          <SkeletonCard key={i} />
+        ))}
       </div>
     );
   }
@@ -79,11 +88,11 @@ export default function ReservationsView() {
       </div>
 
       {reservations.length === 0 ? (
-        <div className="text-center py-16">
-          <p className="text-gray-400 text-lg">
-            Aucune réservation pour cette date
-          </p>
-        </div>
+        <EmptyState
+          icon="📅"
+          title="Aucune réservation pour cette date"
+          subtitle="Les réservations apparaîtront ici"
+        />
       ) : (
         <div className="space-y-3">
           {reservations.map((res) => (

@@ -6,6 +6,7 @@ const tenant = require("../middleware/tenant");
 
 // Client creates order (no auth)
 router.post("/", orderController.createOrder);
+router.get("/:id/track", orderController.getOrderStatus);
 
 // Staff routes
 router.get("/", auth, tenant, orderController.getOrders);

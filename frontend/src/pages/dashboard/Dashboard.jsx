@@ -1,6 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import api from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
+import EmptyState from "../../components/EmptyState";
+import Skeleton, { SkeletonCard } from "../../components/Skeleton";
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -8,7 +10,7 @@ export default function Dashboard() {
 
   const today = new Date().toISOString().split("T")[0];
 
-  const { data: ordersToday = [] } = useQuery({
+  const { data: ordersToday = [], isLoading } = useQuery({
     queryKey: ["orders", restaurantId, "today"],
     queryFn: () =>
       api.get("/orders", { params: { restaurantId } }).then((r) => r.data),
@@ -27,6 +29,7 @@ export default function Dashboard() {
     queryKey: ["reviews", "popular", restaurantId],
     queryFn: () => api.get(`/reviews/popular/${restaurantId}`).then((r) => r.data),
     enabled: !!restaurantId,
+    refetchInterval: 15000,
   });
 
   const allOrders = orders || [];
@@ -79,21 +82,37 @@ export default function Dashboard() {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
         <div className="bg-white rounded-xl shadow-sm p-4 border-l-4 border-emerald-500">
           <p className="text-sm text-gray-500 mb-1">Ventes du jour</p>
-          <p className="text-2xl font-bold text-emerald-700">
-            {totalSales.toFixed(2)} €
-          </p>
+          {isLoading ? (
+            <Skeleton className="h-8 w-24" />
+          ) : (
+            <p className="text-2xl font-bold text-emerald-700">
+              {totalSales.toFixed(2)} €
+            </p>
+          )}
         </div>
         <div className="bg-white rounded-xl shadow-sm p-4">
           <p className="text-sm text-gray-500 mb-1">Commandes payées</p>
-          <p className="text-2xl font-bold text-green-600">{paidCount}</p>
+          {isLoading ? (
+            <Skeleton className="h-8 w-12" />
+          ) : (
+            <p className="text-2xl font-bold text-green-600">{paidCount}</p>
+          )}
         </div>
         <div className="bg-white rounded-xl shadow-sm p-4">
           <p className="text-sm text-gray-500 mb-1">En attente / prépa</p>
-          <p className="text-2xl font-bold text-yellow-600">{pendingCount}</p>
+          {isLoading ? (
+            <Skeleton className="h-8 w-12" />
+          ) : (
+            <p className="text-2xl font-bold text-yellow-600">{pendingCount}</p>
+          )}
         </div>
         <div className="bg-white rounded-xl shadow-sm p-4">
           <p className="text-sm text-gray-500 mb-1">Prêtes à servir</p>
-          <p className="text-2xl font-bold text-green-600">{readyCount}</p>
+          {isLoading ? (
+            <Skeleton className="h-8 w-12" />
+          ) : (
+            <p className="text-2xl font-bold text-green-600">{readyCount}</p>
+          )}
         </div>
       </div>
 
@@ -102,8 +121,10 @@ export default function Dashboard() {
         <div className="bg-white rounded-xl shadow-sm p-4">
           <h2 className="font-semibold text-gray-700 mb-3">
             Plats les plus commandés
-          </h2>{popularItems.length === 0 ? (
-            <p className="text-gray-400 text-sm">Aucune donnée</p>
+          </h2>{isLoading ? (
+            <SkeletonCard />
+          ) : popularItems.length === 0 ? (
+            <EmptyState icon="🍽️" title="Aucune donnée" />
           ) : (
             <div className="space-y-2">
               {popularItems.map(([name, count], i) => (
@@ -138,7 +159,7 @@ export default function Dashboard() {
             ⭐ Meilleures notes clients
           </h2>
           {popularReviews.length === 0 ? (
-            <p className="text-gray-400 text-sm">Aucun avis pour le moment</p>
+            <EmptyState icon="⭐" title="Aucun avis pour le moment" />
           ) : (
             <div className="space-y-3">
               {popularReviews.map((item) => (
