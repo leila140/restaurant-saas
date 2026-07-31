@@ -72,14 +72,14 @@ export default function Dashboard() {
       : "—";
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold text-gray-800 mb-6">Dashboard</h1>
+    <div className="p-4 sm:p-6">
+      <h1 className="text-2xl font-bold text-emerald-700 mb-6">Dashboard</h1>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        <div className="bg-white rounded-xl shadow-sm p-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+        <div className="bg-white rounded-xl shadow-sm p-4 border-l-4 border-emerald-500">
           <p className="text-sm text-gray-500 mb-1">Ventes du jour</p>
-          <p className="text-2xl font-bold text-gray-800">
+          <p className="text-2xl font-bold text-emerald-700">
             {totalSales.toFixed(2)} €
           </p>
         </div>
@@ -117,7 +117,7 @@ export default function Dashboard() {
                   </div>
                   <div className="w-24 h-2 bg-gray-100 rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-gray-900 rounded-full"
+                      className="h-full bg-emerald-500 rounded-full"
                       style={{
                         width: `${Math.min(
                           (count / Math.max(...popularItems.map(([, c]) => c))) *

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import api from "../../services/api";
+import api from "../services/api";
 
 export default function ReviewForm({ restaurantId, orderId, items, tableNumber, onDone }) {
   const [ratings, setRatings] = useState(
@@ -74,14 +74,14 @@ export default function ReviewForm({ restaurantId, orderId, items, tableNumber, 
         value={comment}
         onChange={(e) => setComment(e.target.value)}
         placeholder="Un commentaire ? (optionnel)"
-        className="w-full mt-4 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+        className="w-full mt-4 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
         rows={2}
       />
       <div className="flex gap-2 mt-4">
         <button
           onClick={handleSubmit}
           disabled={mutation.isPending}
-          className="flex-1 py-2 bg-gray-900 text-white rounded-lg text-sm hover:bg-gray-800 disabled:opacity-50"
+          className="flex-1 py-2 bg-emerald-600 text-white rounded-lg text-sm hover:bg-emerald-700 disabled:opacity-50"
         >
           {mutation.isPending ? "Envoi..." : allRated ? "Envoyer" : "Passer"}
         </button>

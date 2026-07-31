@@ -126,7 +126,7 @@ export default function MenuView() {
           {!orderSuccess && (
             <button
               onClick={() => setShowCart(true)}
-              className="relative bg-gray-900 text-white px-4 py-2 rounded-lg text-sm"
+              className="relative bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm"
             >
               Panier
               {cart.length > 0 && (
@@ -170,7 +170,7 @@ export default function MenuView() {
         <div className="max-w-lg mx-auto px-4 mt-4">
           <div className="bg-white rounded-xl shadow-sm p-4">
             <h2 className="font-semibold text-gray-700 mb-2">Scannez le QR code sur votre table</h2>
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <input
                 type="text"
                 value={tableNumber || ""}
@@ -190,7 +190,7 @@ export default function MenuView() {
                       .catch(() => alert("Table introuvable"));
                   }
                 }}
-                className="px-4 py-2 bg-gray-900 text-white rounded-lg text-sm"
+                className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm"
               >
                 Valider
               </button>
@@ -226,7 +226,7 @@ export default function MenuView() {
                     </div>
                     <button
                       onClick={() => addToCart(item)}
-                      className="bg-gray-900 text-white w-8 h-8 rounded-full flex items-center justify-center text-lg"
+                      className="bg-emerald-600 text-white w-8 h-8 rounded-full flex items-center justify-center text-lg"
                     >
                       +
                     </button>
@@ -305,7 +305,7 @@ export default function MenuView() {
                 <button
                   onClick={handleOrder}
                   disabled={!tableId || orderMutation.isPending}
-                  className="w-full py-3 bg-gray-900 text-white rounded-lg font-medium disabled:opacity-50"
+                  className="w-full py-3 bg-emerald-600 text-white rounded-lg font-medium disabled:opacity-50"
                 >
                   {orderMutation.isPending ? "Envoi..." : "Confirmer la commande"}
                 </button>

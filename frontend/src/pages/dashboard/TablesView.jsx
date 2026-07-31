@@ -76,11 +76,11 @@ export default function TablesView() {
   }
 
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
+    <div className="p-4 sm:p-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-6">
         <h1 className="text-2xl font-bold text-gray-800">Tables</h1>
         {(user.role === "owner" || user.role === "manager") && (
-          <form onSubmit={handleCreate} className="flex gap-2 items-center">
+          <form onSubmit={handleCreate} className="flex flex-wrap gap-2 items-center">
             <input
               type="number"
               value={newNumber}
@@ -97,7 +97,7 @@ export default function TablesView() {
             />
             <button
               type="submit"
-              className="px-3 py-1.5 bg-gray-900 text-white rounded-lg text-sm"
+              className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-sm"
             >
               Ajouter
             </button>
@@ -112,7 +112,7 @@ export default function TablesView() {
             key={table._id}
             className={`rounded-xl border-2 p-4 text-center transition-all ${
               statusColors[table.status] || "border-gray-200"
-            } ${editId === table._id ? "ring-2 ring-gray-900" : ""}`}
+            } ${editId === table._id ? "ring-2 ring-emerald-500" : ""}`}
           >
             {editId === table._id ? (
               <div className="space-y-2">
@@ -205,7 +205,7 @@ export default function TablesView() {
             <a
               href={showQR.qr}
               download={`table-${showQR.tableNumber}.png`}
-              className="block w-full text-center px-4 py-2 bg-gray-900 text-white rounded-lg text-sm"
+              className="block w-full text-center px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm"
             >
               Télécharger
             </a>

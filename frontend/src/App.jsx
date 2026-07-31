@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, Link } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AuthProvider } from "./context/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -72,8 +72,12 @@ function App() {
             <Route
               path="*"
               element={
-                <div className="min-h-screen flex items-center justify-center">
-                  <h1 className="text-4xl font-bold text-gray-300">404</h1>
+                <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50">
+                  <h1 className="text-6xl font-bold text-emerald-600 mb-2">404</h1>
+                  <p className="text-gray-500 mb-6">Page introuvable</p>
+                  <Link to="/" className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm hover:bg-emerald-700 transition-colors">
+                    Retour à l'accueil
+                  </Link>
                 </div>
               }
             />

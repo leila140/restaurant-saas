@@ -120,7 +120,7 @@ export default function OrdersView() {
   const renderOrderCard = (order) => (
     <div
       key={order._id}
-      className={`rounded-xl border-2 p-4 ${
+      className={`rounded-xl border-2 p-4 hover:shadow-md transition-shadow ${
         statusColors[order.status] || "border-gray-200"
       }`}
     >
@@ -191,7 +191,7 @@ export default function OrdersView() {
                       status: actions.ready,
                     })
                   }
-                  className="px-3 py-1.5 bg-gray-800 text-white text-xs rounded-lg hover:bg-gray-900"
+                  className="px-3 py-1.5 bg-emerald-600 text-white text-xs rounded-lg hover:bg-emerald-700"
                 >
                   Servi
                 </button>
@@ -204,7 +204,7 @@ export default function OrdersView() {
                       status: actions.served,
                     })
                   }
-                  className="px-3 py-1.5 bg-gray-800 text-white text-xs rounded-lg hover:bg-gray-900"
+                  className="px-3 py-1.5 bg-emerald-600 text-white text-xs rounded-lg hover:bg-emerald-700"
                 >
                   Payer
                 </button>
@@ -244,10 +244,10 @@ export default function OrdersView() {
   }
 
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
+    <div className="p-4 sm:p-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-6">
         <h1 className="text-2xl font-bold text-gray-800">Commandes</h1>
-        <div className="flex gap-2 text-sm">
+        <div className="flex gap-2 text-sm flex-wrap">
           {allowedStatuses ? (
             allowedStatuses.map((s) => (
               <span
@@ -265,7 +265,7 @@ export default function OrdersView() {
                 onClick={() => setFilterStatus(null)}
                 className={`px-3 py-1 rounded-full ${
                   !filterStatus
-                    ? "bg-gray-900 text-white"
+                    ? "bg-emerald-600 text-white"
                     : "bg-gray-100 text-gray-600"
                 }`}
               >
@@ -277,7 +277,7 @@ export default function OrdersView() {
                   onClick={() => setFilterStatus(key)}
                   className={`px-3 py-1 rounded-full ${
                     filterStatus === key
-                      ? "bg-gray-900 text-white"
+                      ? "bg-emerald-600 text-white"
                       : "bg-gray-100 text-gray-600"
                   }`}
                 >

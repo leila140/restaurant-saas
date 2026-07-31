@@ -28,7 +28,7 @@ export default function Register() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-      <div className="w-full max-w-md bg-white rounded-xl shadow-md p-8">
+      <div className="w-full max-w-md bg-white rounded-xl shadow-md p-6 sm:p-8">
         <h1 className="text-2xl font-bold text-center text-gray-800 mb-6">
           Créer votre restaurant
         </h1>
@@ -46,7 +46,7 @@ export default function Register() {
               type="text"
               value={restaurantName}
               onChange={(e) => setRestaurantName(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
               placeholder="Pizza Luna"
               required
             />
@@ -59,7 +59,7 @@ export default function Register() {
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
               placeholder="Jean Dupont"
               required
             />
@@ -72,7 +72,7 @@ export default function Register() {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
               placeholder="contact@restaurant.com"
               required
             />
@@ -85,7 +85,7 @@ export default function Register() {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
               placeholder="••••••••"
               required
               minLength={6}
@@ -94,14 +94,14 @@ export default function Register() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50"
+            className="w-full py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-50"
           >
             {loading ? "Inscription..." : "Créer mon restaurant"}
           </button>
         </form>
         <p className="text-center text-sm text-gray-500 mt-4">
           Déjà un compte ?{" "}
-          <Link to="/login" className="text-gray-900 font-medium underline">
+          <Link to="/login" className="text-emerald-600 font-medium underline">
             Se connecter
           </Link>
         </p>

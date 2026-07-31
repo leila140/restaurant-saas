@@ -67,8 +67,8 @@ export default function ReservationsView() {
   }
 
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
+    <div className="p-4 sm:p-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-6">
         <h1 className="text-2xl font-bold text-gray-800">Réservations</h1>
         <input
           type="date"
@@ -127,7 +127,7 @@ export default function ReservationsView() {
                   </div>
                 </div>
 
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   {res.status === "pending" && (
                     <>
                       <select
