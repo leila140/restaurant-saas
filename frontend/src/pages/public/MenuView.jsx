@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import api from "../../services/api";
@@ -193,6 +193,12 @@ export default function MenuView() {
             <p className="text-emerald-100 text-sm mt-1.5">
               Ajoutez vos plats au panier et suivez votre commande en temps réel.
             </p>
+            <Link
+              to={`/r/${restaurant.slug}/reserver`}
+              className="inline-flex items-center gap-1.5 mt-4 px-4 py-2 bg-white/15 hover:bg-white/25 text-white rounded-full text-sm font-medium transition-colors"
+            >
+              📅 Réserver une table
+            </Link>
           </div>
         </div>
       )}
@@ -301,6 +307,20 @@ export default function MenuView() {
                             </span>
                           )}
                         </div>
+                        {item.avgRating > 0 && (
+                          <div className="flex items-center gap-1 mt-1">
+                            <span className="text-yellow-400 text-xs tracking-tight">
+                              {"★".repeat(Math.round(item.avgRating))}
+                              {"☆".repeat(5 - Math.round(item.avgRating))}
+                            </span>
+                            <span className="text-xs font-semibold text-gray-700">
+                              {item.avgRating}
+                            </span>
+                            <span className="text-[11px] text-gray-400">
+                              ({item.reviewCount})
+                            </span>
+                          </div>
+                        )}
                       </div>
                       {inCart ? (
                         <div className="flex items-center gap-2">

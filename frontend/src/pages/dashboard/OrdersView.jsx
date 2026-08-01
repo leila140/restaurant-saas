@@ -4,6 +4,7 @@ import toast from "react-hot-toast";
 import api from "../../services/api";
 import useSocket from "../../hooks/useSocket";
 import { useAuth } from "../../context/AuthContext";
+import { playNewOrderSound } from "../../utils/sound";
 import EmptyState from "../../components/EmptyState";
 import { SkeletonCard } from "../../components/Skeleton";
 
@@ -62,6 +63,13 @@ export default function OrdersView() {
   const role = user?.role;
   const { on, off } = useSocket(restaurantId);
   const [filterStatus, setFilterStatus] = useState(null);
+  const [soundEnabled, setSoundEnabled] = useState(
+    () => localStorage.getItem("kitchenSoundEnabled") !== "0"
+  );
+
+  useEffect(() => {
+    localStorage.setItem("kitchenSoundEnabled", soundEnabled ? "1" : "0");
+  }, [soundEnabled]);
 
   const allowedStatuses = roleFilters[role] || null;
   const actions = roleActions[role] || {};
@@ -92,6 +100,7 @@ export default function OrdersView() {
     if (!on || !off) return;
 
     const handleNewOrder = () => {
+      if (soundEnabled) playNewOrderSound();
       queryClient.invalidateQueries(["orders", restaurantId]);
     };
 
@@ -106,7 +115,7 @@ export default function OrdersView() {
       off("order:new", handleNewOrder);
       off("order:statusChanged", handleStatusChanged);
     };
-  }, [on, off, restaurantId, queryClient]);
+  }, [on, off, restaurantId, queryClient, soundEnabled]);
 
   const filteredOrders = (orders || []).filter((order) => {
     if (allowedStatuses) return allowedStatuses.includes(order.status);
@@ -255,6 +264,17 @@ export default function OrdersView() {
     <div className="p-4 sm:p-6">
       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-6">
         <h1 className="text-2xl font-bold text-gray-800">Commandes</h1>
+        <button
+          onClick={() => setSoundEnabled((prev) => !prev)}
+          title="Son de notification nouvelle commande"
+          className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+            soundEnabled
+              ? "bg-emerald-600 text-white"
+              : "bg-gray-100 text-gray-400"
+          }`}
+        >
+          🔔 {soundEnabled ? "Son activé" : "Son coupé"}
+        </button>
         <div className="flex gap-2 text-sm flex-wrap">
           {allowedStatuses ? (
             allowedStatuses.map((s) => (

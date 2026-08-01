@@ -10,6 +10,7 @@ const navItems = {
     { to: "/dashboard/tables", label: "Tables", icon: "🪑" },
     { to: "/dashboard/reservations", label: "Réservations", icon: "📅" },
     { to: "/dashboard/staff", label: "Équipe", icon: "👥" },
+    { to: "/dashboard/settings", label: "Réglages", icon: "⚙️" },
   ],
   manager: [
     { to: "/dashboard", label: "Dashboard", icon: "📊" },

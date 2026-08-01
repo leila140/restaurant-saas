@@ -5,6 +5,7 @@ import { AuthProvider } from "./context/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Layout from "./components/Layout";
 import MenuView from "./pages/public/MenuView";
+import ReservationPage from "./pages/public/ReservationPage";
 import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
 import Dashboard from "./pages/dashboard/Dashboard";
@@ -13,6 +14,7 @@ import OrdersView from "./pages/dashboard/OrdersView";
 import TablesView from "./pages/dashboard/TablesView";
 import ReservationsView from "./pages/dashboard/ReservationsView";
 import StaffManager from "./pages/dashboard/StaffManager";
+import Settings from "./pages/dashboard/Settings";
 
 const queryClient = new QueryClient();
 
@@ -30,6 +32,7 @@ function App() {
           <Routes>
             {/* Public routes — table route must come before generic slug route */}
             <Route path="/r/:slug/table/:token" element={<MenuView />} />
+            <Route path="/r/:slug/reserver" element={<ReservationPage />} />
             <Route path="/r/:slug" element={<MenuView />} />
 
             {/* Root redirect */}
@@ -65,6 +68,14 @@ function App() {
                 element={
                   <ProtectedRoute allowedRoles={["owner"]}>
                     <StaffManager />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="settings"
+                element={
+                  <ProtectedRoute allowedRoles={["owner"]}>
+                    <Settings />
                   </ProtectedRoute>
                 }
               />
