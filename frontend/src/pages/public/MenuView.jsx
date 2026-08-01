@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import api from "../../services/api";
@@ -174,12 +174,6 @@ export default function MenuView() {
             Commandez depuis votre table, vos plats arrivent directement en
             cuisine.
           </p>
-          <Link
-            to={`/r/${restaurant.slug}/reserver`}
-            className="inline-block mt-5 text-[13px] font-medium text-emerald-800 underline underline-offset-4 decoration-emerald-300 hover:decoration-emerald-600 transition-colors"
-          >
-            Réserver une table
-          </Link>
         </div>
       )}
 
