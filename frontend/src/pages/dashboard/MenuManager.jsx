@@ -127,6 +127,56 @@ export default function MenuManager() {
     setEditingItem(null);
   };
 
+  const uploadPhoto = async (file) => {
+    const fd = new FormData();
+    fd.append("image", file);
+    const { data } = await api.post("/upload", fd);
+    return data.url;
+  };
+
+  const handleNewPhotoFile = async (file) => {
+    if (!file) return;
+    try {
+      const url = await uploadPhoto(file);
+      setNewItem((prev) => ({ ...prev, photo: url }));
+      toast.success("Image téléversée");
+    } catch {
+      toast.error("Erreur lors du téléversement");
+    }
+  };
+
+  const handleEditPhotoFile = async (file) => {
+    if (!file) return;
+    try {
+      const url = await uploadPhoto(file);
+      setEditForm((prev) => ({ ...prev, photo: url }));
+      toast.success("Image téléversée");
+    } catch {
+      toast.error("Erreur lors du téléversement");
+    }
+  };
+
+  const FilePicker = ({ id, onFile }) => (
+    <>
+      <input
+        type="file"
+        accept="image/*"
+        id={id}
+        className="hidden"
+        onChange={(e) => {
+          onFile(e.target.files?.[0]);
+          e.target.value = "";
+        }}
+      />
+      <label
+        htmlFor={id}
+        className="shrink-0 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded text-sm cursor-pointer transition-colors"
+      >
+        📷 Téléverser
+      </label>
+    </>
+  );
+
   return (
     <div className="p-4 sm:p-6 max-w-4xl mx-auto">
       <h1 className="text-2xl font-bold text-gray-800 mb-6">Gestion du Menu</h1>
@@ -216,6 +266,14 @@ export default function MenuManager() {
                       className="flex-1 min-w-40 px-2 py-1 border rounded text-sm"
                       placeholder="Photo (URL)"
                     />
+                    <FilePicker id="photo-upload-edit" onFile={handleEditPhotoFile} />
+                    {editForm.photo && (
+                      <img
+                        src={editForm.photo}
+                        alt="Aperçu"
+                        className="w-8 h-8 rounded object-cover border border-gray-200"
+                      />
+                    )}
                     <button
                       onClick={() => handleSaveEdit(item._id)}
                       className="px-3 py-1 bg-green-600 text-white rounded text-sm"
@@ -329,14 +387,24 @@ export default function MenuManager() {
                 placeholder="Description (optionnel)"
                 className="w-full px-2 py-1 border rounded text-sm"
               />
-              <input
-                value={newItem.photo}
-                onChange={(e) =>
-                  setNewItem({ ...newItem, photo: e.target.value })
-                }
-                placeholder="Photo (URL, optionnel)"
-                className="w-full px-2 py-1 border rounded text-sm"
-              />
+              <div className="flex items-center gap-2">
+                <input
+                  value={newItem.photo}
+                  onChange={(e) =>
+                    setNewItem({ ...newItem, photo: e.target.value })
+                  }
+                  placeholder="Photo (URL, optionnel)"
+                  className="flex-1 min-w-0 px-2 py-1 border rounded text-sm"
+                />
+                <FilePicker id="photo-upload-add" onFile={handleNewPhotoFile} />
+                {newItem.photo && (
+                  <img
+                    src={newItem.photo}
+                    alt="Aperçu"
+                    className="w-8 h-8 rounded object-cover border border-gray-200"
+                  />
+                )}
+              </div>
               <div className="flex gap-2">
                 <button
                   type="submit"

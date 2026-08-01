@@ -2,11 +2,16 @@ require("dotenv").config();
 const express = require("express");
 const http = require("http");
 const cors = require("cors");
+const path = require("path");
+const fs = require("fs");
 const { Server } = require("socket.io");
 const connectDB = require("./config/db");
 
 const app = express();
 const server = http.createServer(app);
+
+const uploadsDir = path.join(__dirname, "uploads");
+fs.mkdirSync(uploadsDir, { recursive: true });
 
 const io = new Server(server, {
   cors: {
@@ -18,6 +23,7 @@ const io = new Server(server, {
 // Middleware
 app.use(cors());
 app.use(express.json());
+app.use("/uploads", express.static(uploadsDir));
 
 // Make io accessible in routes
 app.set("io", io);
@@ -35,6 +41,7 @@ app.use("/api/orders", require("./routes/orders"));
 app.use("/api/tables", require("./routes/tables"));
 app.use("/api/reservations", require("./routes/reservations"));
 app.use("/api/reviews", require("./routes/reviews"));
+app.use("/api/upload", require("./routes/upload"));
 
 // Socket.io connection
 io.on("connection", (socket) => {
