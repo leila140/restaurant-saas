@@ -7,6 +7,12 @@ const roleCheck = require("../middleware/roleCheck");
 
 // Owner routes (must be declared before /:slug)
 router.get("/me", auth, tenant, restaurantController.getMyRestaurant);
+router.get(
+  "/me/reservation-qr",
+  auth,
+  tenant,
+  restaurantController.getReservationQR
+);
 router.put(
   "/me",
   auth,

@@ -2,6 +2,7 @@ const Restaurant = require("../models/Restaurant");
 const MenuCategory = require("../models/MenuCategory");
 const MenuItem = require("../models/MenuItem");
 const Review = require("../models/Review");
+const QRCode = require("qrcode");
 
 exports.getBySlug = async (req, res) => {
   try {
@@ -85,6 +86,22 @@ exports.getMyRestaurant = async (req, res) => {
       address: restaurant.address,
       phone: restaurant.phone,
     });
+  } catch (err) {
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+exports.getReservationQR = async (req, res) => {
+  try {
+    const restaurant = await Restaurant.findById(req.restaurantId);
+    if (!restaurant) {
+      return res.status(404).json({ error: "Restaurant not found" });
+    }
+
+    const url = `${process.env.CLIENT_URL || "http://localhost:5173"}/r/${restaurant.slug}/reserver`;
+    const qr = await QRCode.toDataURL(url);
+
+    res.json({ url, qr });
   } catch (err) {
     res.status(500).json({ error: "Internal server error" });
   }

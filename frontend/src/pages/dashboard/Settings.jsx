@@ -33,6 +33,13 @@ export default function Settings() {
     onError: () => toast.error("Erreur lors de l'enregistrement"),
   });
 
+  const { data: reservationQR } = useQuery({
+    queryKey: ["restaurant", "me", "qr"],
+    queryFn: () =>
+      api.get("/restaurants/me/reservation-qr").then((r) => r.data),
+    enabled: !!data?.slug,
+  });
+
   const update = (field) => (e) =>
     setForm((prev) => ({ ...prev, [field]: e.target.value }));
 
@@ -124,6 +131,40 @@ export default function Settings() {
           {saveMutation.isPending ? "Enregistrement..." : "Enregistrer"}
         </button>
       </form>
+
+      {/* Reservation QR */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mt-6">
+        <h2 className="font-semibold text-gray-800 mb-1">
+          QR code de réservation
+        </h2>
+        <p className="text-sm text-gray-500 mb-4">
+          Imprimez ce QR code pour l'entrée du restaurant — il ouvre la page de
+          réservation.
+        </p>
+        {reservationQR ? (
+          <div className="flex flex-col sm:flex-row items-center gap-5">
+            <img
+              src={reservationQR.qr}
+              alt="QR code réservation"
+              className="w-40 h-40 border border-gray-200 rounded-xl bg-white"
+            />
+            <div className="flex-1 space-y-2 text-center sm:text-left">
+              <p className="text-xs text-gray-500 break-all">
+                {reservationQR.url}
+              </p>
+              <a
+                href={reservationQR.qr}
+                download="reservation-qr.png"
+                className="inline-block px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-medium transition-colors"
+              >
+                ⬇ Télécharger le QR (PNG)
+              </a>
+            </div>
+          </div>
+        ) : (
+          <div className="animate-pulse bg-gray-100 rounded-xl h-40 w-40" />
+        )}
+      </div>
     </div>
   );
 }
