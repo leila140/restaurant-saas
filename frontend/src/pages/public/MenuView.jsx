@@ -6,25 +6,6 @@ import api from "../../services/api";
 import Confetti from "../../components/Confetti";
 import OrderTracking from "../../components/OrderTracking";
 
-const EMOJI_RULES = [
-  [/entr|salade|salad|crudit/i, "🥗"],
-  [/pizza/i, "🍕"],
-  [/burger|sandwich/i, "🍔"],
-  [/pasta|pâte|pates/i, "🍝"],
-  [/grill|poulet|viande|steak|poisson/i, "🍖"],
-  [/soupe|soup/i, "🍜"],
-  [/frite|frites/i, "🍟"],
-  [/dessert|gâteau|gateau|tarte|crème|creme|cake/i, "🍰"],
-  [/boisson|drink|soda|jus|thé|the |café|cafe|bière|vin/i, "🥤"],
-];
-
-const dishEmoji = (name = "") => {
-  for (const [rule, emoji] of EMOJI_RULES) {
-    if (rule.test(name)) return emoji;
-  }
-  return "🍽️";
-};
-
 export default function MenuView() {
   const { slug, token } = useParams();
   const [cart, setCart] = useState([]);
@@ -141,65 +122,64 @@ export default function MenuView() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900" />
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-900" />
       </div>
     );
   }
 
   if (!restaurant) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-gray-500">Restaurant introuvable</p>
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <p className="text-stone-500">Restaurant introuvable</p>
       </div>
     );
   }
 
+  const initial = (restaurant.name || "R").trim().charAt(0).toUpperCase();
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-emerald-50/40 pb-28">
+    <div className="min-h-screen bg-white pb-28">
       {/* Header */}
-      <div className="bg-white/90 backdrop-blur-md border-b border-gray-100 shadow-sm sticky top-0 z-10">
-        <div className="max-w-lg mx-auto px-4 py-3.5 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <span className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white flex items-center justify-center text-lg shadow-sm">
-              🍽️
+      <header className="sticky top-0 z-10 bg-white/90 backdrop-blur-md border-b border-stone-100">
+        <div className="max-w-lg mx-auto px-5 py-3.5">
+          <div className="flex items-center gap-3">
+            <span className="w-9 h-9 rounded-full bg-emerald-900 text-white flex items-center justify-center font-display text-sm font-semibold">
+              {initial}
             </span>
             <div>
-              <h1 className="text-lg font-bold text-gray-900 leading-tight">
+              <h1 className="font-display text-lg font-semibold text-stone-900 leading-tight">
                 {restaurant.name}
               </h1>
               {tableNumber && (
-                <p className="text-[11px] text-emerald-600 font-semibold">
+                <p className="text-[10px] uppercase tracking-[0.18em] text-emerald-800 font-semibold">
                   Table {tableNumber}
                 </p>
               )}
             </div>
           </div>
         </div>
-      </div>
+      </header>
 
-      {/* Hero */}
+      {/* Intro */}
       {!orderSuccess && (
-        <div className="relative overflow-hidden bg-gradient-to-br from-emerald-600 via-emerald-600 to-teal-700 text-white">
-          <div className="absolute -right-10 -top-10 w-40 h-40 rounded-full bg-white/10" />
-          <div className="absolute -bottom-16 -left-8 w-48 h-48 rounded-full bg-white/10" />
-          <div className="relative max-w-lg mx-auto px-4 py-7">
-            <p className="text-emerald-100 text-[11px] font-semibold uppercase tracking-widest">
-              {tableNumber ? `Bienvenue · Table ${tableNumber}` : "Bienvenue"}
-            </p>
-            <h2 className="text-2xl font-bold mt-1">
-              Commandez depuis votre table
-            </h2>
-            <p className="text-emerald-100 text-sm mt-1.5">
-              Ajoutez vos plats au panier et suivez votre commande en temps réel.
-            </p>
-            <Link
-              to={`/r/${restaurant.slug}/reserver`}
-              className="inline-flex items-center gap-1.5 mt-4 px-4 py-2 bg-white/15 hover:bg-white/25 text-white rounded-full text-sm font-medium transition-colors"
-            >
-              📅 Réserver une table
-            </Link>
-          </div>
+        <div className="max-w-lg mx-auto px-5 pt-10 pb-8 text-center">
+          <p className="text-[10px] uppercase tracking-[0.28em] text-emerald-800 font-semibold">
+            {tableNumber ? `Bienvenue · Table ${tableNumber}` : "Bienvenue"}
+          </p>
+          <h2 className="font-display text-3xl font-semibold text-stone-900 mt-3 leading-snug">
+            {restaurant.name}
+          </h2>
+          <p className="text-[15px] text-stone-500 mt-3 leading-relaxed max-w-sm mx-auto">
+            Commandez depuis votre table, vos plats arrivent directement en
+            cuisine.
+          </p>
+          <Link
+            to={`/r/${restaurant.slug}/reserver`}
+            className="inline-block mt-5 text-[13px] font-medium text-emerald-800 underline underline-offset-4 decoration-emerald-300 hover:decoration-emerald-600 transition-colors"
+          >
+            Réserver une table
+          </Link>
         </div>
       )}
 
@@ -208,7 +188,7 @@ export default function MenuView() {
 
       {/* Order tracking / Success */}
       {orderSuccess && lastOrder && (
-        <div className="max-w-lg mx-auto px-4 mt-4">
+        <div className="max-w-lg mx-auto px-5 mt-4">
           <OrderTracking
             orderId={lastOrder._id}
             restaurantId={restaurant._id}
@@ -223,7 +203,7 @@ export default function MenuView() {
               setOrderSuccess(false);
               setLastOrder(null);
             }}
-            className="w-full mt-3 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm hover:bg-gray-200 transition-colors"
+            className="w-full mt-4 py-2.5 border border-stone-200 text-stone-600 rounded-full text-sm font-medium hover:border-stone-300 hover:text-stone-900 transition-colors"
           >
             Commander à nouveau
           </button>
@@ -232,16 +212,21 @@ export default function MenuView() {
 
       {/* Table selection — only show if no QR token in URL */}
       {!tableId && !token && (
-        <div className="max-w-lg mx-auto px-4 mt-4">
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
-            <h2 className="font-semibold text-gray-800 mb-3">Scannez le QR code sur votre table</h2>
+        <div className="max-w-lg mx-auto px-5 mt-2">
+          <div className="rounded-2xl border border-stone-200 p-5">
+            <h2 className="font-display text-xl font-semibold text-stone-900">
+              Choisissez votre table
+            </h2>
+            <p className="text-sm text-stone-500 mt-1 mb-4">
+              Scannez le QR code sur votre table ou entrez le token affiché.
+            </p>
             <div className="flex flex-col sm:flex-row gap-2">
               <input
                 type="text"
                 value={tableNumber || ""}
                 onChange={(e) => setTableNumber(e.target.value)}
-                placeholder="Ou entrez le token manuellement"
-                className="flex-1 px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                placeholder="Token de la table"
+                className="flex-1 px-3 py-2 border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-800/20"
               />
               <button
                 onClick={() => {
@@ -255,7 +240,7 @@ export default function MenuView() {
                       .catch(() => toast.error("Table introuvable"));
                   }
                 }}
-                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-medium transition-colors"
+                className="px-5 py-2 bg-emerald-900 hover:bg-emerald-800 text-white rounded-xl text-sm font-medium transition-colors"
               >
                 Valider
               </button>
@@ -266,96 +251,99 @@ export default function MenuView() {
 
       {/* Menu — hide when showing order tracking */}
       {!orderSuccess && (
-        <div className="max-w-lg mx-auto px-4 mt-6">
+        <div className="max-w-lg mx-auto px-5 mt-4">
           {restaurant.menu?.map((cat) => (
-            <div key={cat._id} className="mb-8">
-              <div className="flex items-center gap-2.5 mb-3">
-                <span className="w-9 h-9 rounded-xl bg-white border border-emerald-100 text-lg flex items-center justify-center shadow-sm">
-                  {dishEmoji(cat.name)}
-                </span>
-                <h2 className="text-base font-bold text-gray-900">{cat.name}</h2>
-                <div className="flex-1 h-px bg-gray-200" />
-                <span className="text-xs text-gray-400">
-                  {cat.items?.length || 0} plat
-                  {cat.items?.length > 1 ? "s" : ""}
-                </span>
+            <section key={cat._id} className="mb-10">
+              <div className="flex items-center gap-4 mb-4">
+                <span className="h-px flex-1 bg-stone-200" />
+                <h2 className="text-[11px] font-semibold uppercase tracking-[0.22em] text-stone-500">
+                  {cat.name}
+                </h2>
+                <span className="h-px flex-1 bg-stone-200" />
               </div>
-              <div className="space-y-2.5">
+              <div className="divide-y divide-stone-100">
                 {cat.items?.map((item) => {
                   const inCart = qtyOf(item._id) > 0;
                   return (
                     <div
                       key={item._id}
-                      className="animate-fade-up bg-white rounded-2xl border border-gray-100 p-4 flex items-center gap-3 hover:border-emerald-200 hover:shadow-lg hover:-translate-y-0.5 transition-all"
+                      className="py-4 animate-fade-up"
                     >
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-gray-900">
-                          {item.name}
-                        </h3>
-                        {item.description && (
-                          <p className="text-sm text-gray-500 mt-0.5">
-                            {item.description}
-                          </p>
-                        )}
-                        <div className="flex items-center gap-1.5 mt-1.5">
-                          <p className="font-bold text-emerald-700">
-                            {item.price.toFixed(2)} €
-                          </p>
-                          {item.prepTimeMinutes > 0 && (
-                            <span className="text-[11px] text-gray-400">
-                              · {item.prepTimeMinutes} min
-                            </span>
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-baseline gap-2">
+                            <h3 className="font-display text-[17px] font-medium text-stone-900 leading-snug">
+                              {item.name}
+                            </h3>
+                            {item.prepTimeMinutes > 0 && (
+                              <span className="text-[10px] text-stone-400 whitespace-nowrap">
+                                {item.prepTimeMinutes} min
+                              </span>
+                            )}
+                          </div>
+                          {item.description && (
+                            <p className="text-[13px] text-stone-500 mt-1 leading-relaxed">
+                              {item.description}
+                            </p>
+                          )}
+                          {item.avgRating > 0 && (
+                            <p className="mt-1.5 flex items-center gap-1.5 text-[11px]">
+                              <span className="text-amber-500 tracking-tight">
+                                {"★".repeat(Math.round(item.avgRating))}
+                                {"☆".repeat(5 - Math.round(item.avgRating))}
+                              </span>
+                              <span className="font-medium text-stone-600">
+                                {item.avgRating}
+                              </span>
+                              <span className="text-stone-400">
+                                ({item.reviewCount})
+                              </span>
+                            </p>
                           )}
                         </div>
-                        {item.avgRating > 0 && (
-                          <div className="flex items-center gap-1 mt-1">
-                            <span className="text-yellow-400 text-xs tracking-tight">
-                              {"★".repeat(Math.round(item.avgRating))}
-                              {"☆".repeat(5 - Math.round(item.avgRating))}
-                            </span>
-                            <span className="text-xs font-semibold text-gray-700">
-                              {item.avgRating}
-                            </span>
-                            <span className="text-[11px] text-gray-400">
-                              ({item.reviewCount})
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                      {inCart ? (
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => updateQuantity(item._id, -1)}
-                            className="w-8 h-8 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-lg leading-none shadow-sm transition-all active:scale-90"
-                          >
-                            −
-                          </button>
-                          <span className="w-5 text-center text-sm font-bold text-gray-800">
-                            {qtyOf(item._id)}
+                        <div className="flex flex-col items-end gap-2.5 shrink-0">
+                          <span className="text-[15px] font-semibold text-emerald-900 tabular-nums">
+                            {item.price.toFixed(2)} €
                           </span>
-                          <button
-                            onClick={() => updateQuantity(item._id, 1)}
-                            className="w-8 h-8 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-lg leading-none shadow-sm transition-all active:scale-90"
-                          >
-                            +
-                          </button>
+                          {inCart ? (
+                            <div className="flex items-center gap-1.5">
+                              <button
+                                onClick={() => updateQuantity(item._id, -1)}
+                                className="w-7 h-7 rounded-full border border-stone-200 text-stone-600 text-sm hover:border-emerald-900 hover:text-emerald-900 transition-colors"
+                                aria-label="Retirer un"
+                              >
+                                −
+                              </button>
+                              <span className="w-4 text-center text-[13px] font-semibold text-stone-800">
+                                {qtyOf(item._id)}
+                              </span>
+                              <button
+                                onClick={() => updateQuantity(item._id, 1)}
+                                className="w-7 h-7 rounded-full bg-emerald-900 text-white text-sm hover:bg-emerald-800 transition-colors"
+                                aria-label="Ajouter un"
+                              >
+                                +
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => addToCart(item)}
+                              aria-label={`Ajouter ${item.name}`}
+                              className="w-7 h-7 rounded-full border border-emerald-900 text-emerald-900 text-base leading-none hover:bg-emerald-900 hover:text-white transition-colors"
+                            >
+                              +
+                            </button>
+                          )}
                         </div>
-                      ) : (
-                        <button
-                          onClick={() => addToCart(item)}
-                          className="w-9 h-9 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white text-xl flex items-center justify-center shadow-sm transition-all active:scale-90"
-                        >
-                          +
-                        </button>
-                      )}
+                      </div>
                     </div>
                   );
                 })}
               </div>
-            </div>
+            </section>
           ))}
           {restaurant.menu?.length === 0 && (
-            <p className="text-center text-gray-400 py-12">
+            <p className="text-center text-stone-400 py-16 font-display text-lg">
               Le menu est en cours de préparation...
             </p>
           )}
@@ -366,46 +354,50 @@ export default function MenuView() {
       {showCart && (
         <div className="fixed inset-0 z-20">
           <div
-            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            className="absolute inset-0 bg-stone-900/40 backdrop-blur-sm"
             onClick={() => setShowCart(false)}
           />
           <div className="absolute right-0 top-0 h-full w-full max-w-md bg-white shadow-xl flex flex-col sm:rounded-l-3xl">
-            <div className="p-5 border-b border-gray-100 flex items-center justify-between">
-              <h2 className="text-lg font-bold text-gray-900">Panier</h2>
+            <div className="px-6 py-5 border-b border-stone-100 flex items-center justify-between">
+              <h2 className="font-display text-xl font-semibold text-stone-900">
+                Votre panier
+              </h2>
               <button
                 onClick={() => setShowCart(false)}
-                className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 flex items-center justify-center text-lg transition-colors"
+                className="w-8 h-8 rounded-full bg-stone-100 hover:bg-stone-200 text-stone-600 flex items-center justify-center text-lg transition-colors"
               >
                 ×
               </button>
             </div>
-            <div className="flex-1 overflow-auto p-4 space-y-3">
+            <div className="flex-1 overflow-auto px-6 py-4 divide-y divide-stone-100">
               {cart.length === 0 && (
-                <p className="text-gray-400 text-center py-8">
+                <p className="text-stone-400 text-center py-10 font-display">
                   Votre panier est vide
                 </p>
               )}
               {cart.map((item) => (
-                <div key={item.menuItemId} className="bg-gray-50 rounded-2xl p-3">
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium text-gray-800">{item.name}</span>
-                    <span className="font-semibold text-gray-900">
+                <div key={item.menuItemId} className="py-4">
+                  <div className="flex items-baseline justify-between gap-3">
+                    <span className="font-display text-[15px] font-medium text-stone-900">
+                      {item.name}
+                    </span>
+                    <span className="text-sm font-semibold text-stone-700 tabular-nums whitespace-nowrap">
                       {(item.price * item.quantity).toFixed(2)} €
                     </span>
                   </div>
-                  <div className="flex items-center gap-2 mt-2">
+                  <div className="flex items-center gap-2 mt-2.5">
                     <button
                       onClick={() => updateQuantity(item.menuItemId, -1)}
-                      className="w-7 h-7 rounded-full bg-white border border-gray-200 text-gray-600 text-sm hover:border-emerald-500 hover:text-emerald-600 transition-colors"
+                      className="w-7 h-7 rounded-full border border-stone-200 text-stone-600 text-sm hover:border-emerald-900 hover:text-emerald-900 transition-colors"
                     >
                       −
                     </button>
-                    <span className="w-6 text-center text-sm font-medium">
+                    <span className="w-5 text-center text-sm font-semibold">
                       {item.quantity}
                     </span>
                     <button
                       onClick={() => updateQuantity(item.menuItemId, 1)}
-                      className="w-7 h-7 rounded-full bg-white border border-gray-200 text-gray-600 text-sm hover:border-emerald-500 hover:text-emerald-600 transition-colors"
+                      className="w-7 h-7 rounded-full border border-stone-200 text-stone-600 text-sm hover:border-emerald-900 hover:text-emerald-900 transition-colors"
                     >
                       +
                     </button>
@@ -415,25 +407,25 @@ export default function MenuView() {
                       onChange={(e) =>
                         updateNotes(item.menuItemId, e.target.value)
                       }
-                      placeholder="Notes..."
-                      className="flex-1 ml-2 px-2 py-1 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      placeholder="Note pour la cuisine..."
+                      className="flex-1 ml-2 px-2.5 py-1.5 border border-stone-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-emerald-800/20 placeholder:text-stone-400"
                     />
                   </div>
                 </div>
               ))}
             </div>
             {cart.length > 0 && (
-              <div className="p-4 border-t border-gray-100">
-                <div className="flex justify-between items-center mb-3">
-                  <span className="font-medium text-gray-700">Total</span>
-                  <span className="font-bold text-xl text-emerald-700">
+              <div className="px-6 py-5 border-t border-stone-100">
+                <div className="flex justify-between items-center mb-4">
+                  <span className="font-medium text-stone-500">Total</span>
+                  <span className="font-display text-2xl font-semibold text-emerald-900 tabular-nums">
                     {total.toFixed(2)} €
                   </span>
                 </div>
                 <button
                   onClick={handleOrder}
                   disabled={!tableId || orderMutation.isPending}
-                  className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-semibold disabled:opacity-50 transition-colors"
+                  className="w-full py-3.5 bg-emerald-900 hover:bg-emerald-800 text-white rounded-full font-semibold disabled:opacity-50 transition-colors"
                 >
                   {orderMutation.isPending ? "Envoi..." : "Confirmer la commande"}
                 </button>
@@ -450,20 +442,20 @@ export default function MenuView() {
 
       {/* Floating cart bar */}
       {!orderSuccess && cart.length > 0 && (
-        <div className="fixed bottom-0 inset-x-0 z-20 p-4 bg-gradient-to-t from-white via-white/70 to-transparent pointer-events-none">
+        <div className="fixed bottom-0 inset-x-0 z-20 p-5 bg-gradient-to-t from-white via-white/70 to-transparent pointer-events-none">
           <div className="max-w-lg mx-auto pointer-events-auto">
             <button
               onClick={() => setShowCart(true)}
-              className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-2xl shadow-xl shadow-emerald-600/30 py-3.5 px-5 flex items-center justify-between font-semibold transition-all active:scale-[0.98]"
+              className="w-full bg-emerald-900 hover:bg-emerald-800 text-white rounded-full shadow-xl shadow-emerald-900/25 py-3.5 px-6 flex items-center justify-between font-semibold transition-all active:scale-[0.98]"
             >
               <span className="flex items-center gap-2.5">
-                <span className="w-6 h-6 rounded-full bg-white text-emerald-700 text-xs font-bold flex items-center justify-center">
+                <span className="w-6 h-6 rounded-full bg-white text-emerald-900 text-xs font-bold flex items-center justify-center">
                   {cart.reduce((s, c) => s + c.quantity, 0)}
                 </span>
                 Voir le panier
               </span>
-              <span className="flex items-center gap-1.5">
-                {total.toFixed(2)} € <span>→</span>
+              <span className="flex items-center gap-2 tabular-nums">
+                {total.toFixed(2)} € <span aria-hidden>→</span>
               </span>
             </button>
           </div>

@@ -45,82 +45,87 @@ export default function ReservationPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600" />
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-900" />
       </div>
     );
   }
 
   if (!restaurant) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-gray-500">Restaurant introuvable</p>
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <p className="text-stone-500">Restaurant introuvable</p>
       </div>
     );
   }
 
   const fieldClass =
-    "w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500";
-  const labelClass = "block text-sm font-medium text-gray-700 mb-1";
+    "w-full px-3 py-2 border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-800/20 bg-white";
+  const labelClass = "block text-sm font-medium text-stone-600 mb-1";
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-emerald-50/40 pb-16">
+    <div className="min-h-screen bg-white pb-16">
       {/* Header */}
-      <div className="bg-white/90 backdrop-blur-md border-b border-gray-100 shadow-sm sticky top-0 z-10">
-        <div className="max-w-lg mx-auto px-4 py-3.5 flex items-center gap-2.5">
-          <span className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white flex items-center justify-center text-lg shadow-sm">
-            🍽️
-          </span>
-          <div>
-            <h1 className="text-lg font-bold text-gray-900 leading-tight">
-              {restaurant.name}
-            </h1>
-            <p className="text-[11px] text-emerald-600 font-semibold">
-              Réservation
-            </p>
+      <header className="sticky top-0 z-10 bg-white/90 backdrop-blur-md border-b border-stone-100">
+        <div className="max-w-lg mx-auto px-5 py-3.5">
+          <div className="flex items-center gap-3">
+            <span className="w-9 h-9 rounded-full bg-emerald-900 text-white flex items-center justify-center font-display text-sm font-semibold">
+              {(restaurant.name || "R").trim().charAt(0).toUpperCase()}
+            </span>
+            <div>
+              <h1 className="font-display text-lg font-semibold text-stone-900 leading-tight">
+                {restaurant.name}
+              </h1>
+              <p className="text-[10px] uppercase tracking-[0.18em] text-emerald-800 font-semibold">
+                Réservation
+              </p>
+            </div>
           </div>
         </div>
-      </div>
+      </header>
 
-      {/* Hero */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-emerald-600 via-emerald-600 to-teal-700 text-white">
-        <div className="absolute -right-10 -top-10 w-40 h-40 rounded-full bg-white/10" />
-        <div className="absolute -bottom-16 -left-8 w-48 h-48 rounded-full bg-white/10" />
-        <div className="relative max-w-lg mx-auto px-4 py-7">
-          <p className="text-emerald-100 text-[11px] font-semibold uppercase tracking-widest">
-            Réserver une table
-          </p>
-          <h2 className="text-2xl font-bold mt-1">Votre table vous attend</h2>
-          <p className="text-emerald-100 text-sm mt-1.5">
-            Nous confirmons votre réservation en quelques minutes.
-          </p>
+      {/* Intro */}
+      <div className="max-w-lg mx-auto px-5 pt-10 pb-8 text-center">
+        <p className="text-[10px] uppercase tracking-[0.28em] text-emerald-800 font-semibold">
+          Réserver une table
+        </p>
+        <h2 className="font-display text-3xl font-semibold text-stone-900 mt-3 leading-snug">
+          Votre table vous attend
+        </h2>
+        <p className="text-[15px] text-stone-500 mt-3 leading-relaxed max-w-sm mx-auto">
+          Nous confirmons votre réservation en quelques minutes.
+        </p>
+        <div className="mt-8 flex items-center justify-center gap-3">
+          <span className="h-px w-12 bg-stone-200" />
+          <span className="text-[10px] uppercase tracking-[0.2em] text-stone-400">Détails</span>
+          <span className="h-px w-12 bg-stone-200" />
         </div>
       </div>
 
-      <div className="max-w-lg mx-auto px-4 mt-6">
+      <div className="max-w-lg mx-auto px-5 mt-2">
         {submitted ? (
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 text-center animate-fade-up">
-            <div className="w-16 h-16 mx-auto rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center text-3xl">
+          <div className="text-center animate-fade-up">
+            <div className="w-16 h-16 mx-auto rounded-full bg-emerald-900 text-white flex items-center justify-center text-3xl">
               ✓
             </div>
-            <h3 className="text-xl font-bold text-gray-900 mt-4">
+            <h3 className="font-display text-2xl font-semibold text-stone-900 mt-6">
               Réservation envoyée !
             </h3>
-            <p className="text-gray-500 text-sm mt-2">
+            <p className="text-stone-500 text-sm mt-3 leading-relaxed">
               Merci {submitted.customerName} — nous vous attendons le{" "}
-              <span className="font-semibold text-gray-700">
+              <span className="font-semibold text-stone-800">
                 {new Date(submitted.date).toLocaleDateString("fr-FR")}
               </span>{" "}
               à{" "}
-              <span className="font-semibold text-gray-700">
+              <span className="font-semibold text-stone-800">
                 {submitted.time}
               </span>{" "}
-              pour <span className="font-semibold text-gray-700">{submitted.partySize}</span>{" "}
+              pour <span className="font-semibold text-stone-800">{submitted.partySize}</span>{" "}
               personne{submitted.partySize > 1 ? "s" : ""}.
             </p>
             <Link
               to={`/r/${restaurant.slug}`}
-              className="inline-block mt-6 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-semibold transition-colors"
+              className="inline-block mt-8 px-6 py-3 bg-emerald-900 hover:bg-emerald-800 text-white rounded-full text-sm font-semibold transition-colors"
             >
               Voir le menu
             </Link>
@@ -128,7 +133,7 @@ export default function ReservationPage() {
         ) : (
           <form
             onSubmit={handleSubmit}
-            className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-4"
+            className="space-y-4"
           >
             <div>
               <label className={labelClass}>Nom complet</label>
@@ -192,13 +197,13 @@ export default function ReservationPage() {
             <button
               type="submit"
               disabled={reservationMutation.isPending}
-              className="w-full py-3.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-2xl font-semibold shadow-lg shadow-emerald-600/20 transition-all active:scale-[0.98] disabled:opacity-50"
+              className="w-full py-3.5 bg-emerald-900 hover:bg-emerald-800 text-white rounded-full font-semibold transition-colors disabled:opacity-50 active:scale-[0.98]"
             >
               {reservationMutation.isPending ? "Envoi..." : "Réserver"}
             </button>
             <Link
               to={`/r/${restaurant.slug}`}
-              className="block text-center text-sm text-gray-500 hover:text-gray-700"
+              className="block text-center text-sm text-stone-500 hover:text-stone-800"
             >
               ← Retour au menu
             </Link>
