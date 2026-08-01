@@ -10,6 +10,7 @@ router.get("/:id/track", orderController.getOrderStatus);
 
 // Staff routes
 router.get("/", auth, tenant, orderController.getOrders);
+router.get("/stats", auth, tenant, orderController.getStats);
 router.get("/:id", auth, tenant, orderController.getOrder);
 router.patch("/:id/status", auth, tenant, orderController.updateStatus);
 

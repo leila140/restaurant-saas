@@ -55,21 +55,56 @@ exports.getReservations = async (req, res) => {
 exports.updateReservation = async (req, res) => {
   try {
     const { tableId, status } = req.body;
-    const reservation = await Reservation.findOneAndUpdate(
-      { _id: req.params.id, restaurantId: req.restaurantId },
-      { tableId, status },
-      { new: true }
-    ).populate("tableId", "number");
+    const reservation = await Reservation.findOne({
+      _id: req.params.id,
+      restaurantId: req.restaurantId,
+    });
 
     if (!reservation) {
       return res.status(404).json({ error: "Reservation not found" });
     }
 
+    if (tableId) {
+      const table = await Table.findOne({
+        _id: tableId,
+        restaurantId: req.restaurantId,
+      });
+      if (!table) {
+        return res.status(400).json({ error: "Table not found" });
+      }
+      if (reservation.partySize > table.capacity) {
+        return res.status(409).json({
+          error: `Cette table ne peut accueillir que ${table.capacity} personnes`,
+        });
+      }
+      const conflict = await Reservation.findOne({
+        restaurantId: req.restaurantId,
+        tableId,
+        date: reservation.date,
+        time: reservation.time,
+        status: { $ne: "cancelled" },
+        _id: { $ne: reservation._id },
+      });
+      if (conflict) {
+        return res.status(409).json({
+          error: "Cette table est déjà réservée à ce créneau",
+        });
+      }
+    }
+
+    reservation.tableId = tableId ?? reservation.tableId;
+    if (status) reservation.status = status;
+    await reservation.save();
+    const populated = await reservation.populate("tableId", "number");
+
     if (tableId && status === "confirmed") {
       await Table.findByIdAndUpdate(tableId, { status: "reserved" });
     }
+    if (reservation.tableId && status === "cancelled") {
+      await Table.findByIdAndUpdate(reservation.tableId, { status: "free" });
+    }
 
-    res.json(reservation);
+    res.json(populated);
   } catch (err) {
     res.status(500).json({ error: "Internal server error" });
   }

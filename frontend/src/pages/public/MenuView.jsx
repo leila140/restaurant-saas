@@ -270,36 +270,46 @@ export default function MenuView() {
                       className="py-4 animate-fade-up"
                     >
                       <div className="flex items-start justify-between gap-4">
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-baseline gap-2">
-                            <h3 className="font-display text-[17px] font-medium text-stone-900 leading-snug">
-                              {item.name}
-                            </h3>
-                            {item.prepTimeMinutes > 0 && (
-                              <span className="text-[10px] text-stone-400 whitespace-nowrap">
-                                {item.prepTimeMinutes} min
-                              </span>
+                        <div className="flex items-start gap-3 flex-1 min-w-0">
+                          {item.photo && (
+                            <img
+                              src={item.photo}
+                              alt={item.name}
+                              className="w-16 h-16 rounded-xl object-cover border border-stone-100 shrink-0"
+                              loading="lazy"
+                            />
+                          )}
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-baseline gap-2">
+                              <h3 className="font-display text-[17px] font-medium text-stone-900 leading-snug">
+                                {item.name}
+                              </h3>
+                              {item.prepTimeMinutes > 0 && (
+                                <span className="text-[10px] text-stone-400 whitespace-nowrap">
+                                  {item.prepTimeMinutes} min
+                                </span>
+                              )}
+                            </div>
+                            {item.description && (
+                              <p className="text-[13px] text-stone-500 mt-1 leading-relaxed">
+                                {item.description}
+                              </p>
+                            )}
+                            {item.avgRating > 0 && (
+                              <p className="mt-1.5 flex items-center gap-1.5 text-[11px]">
+                                <span className="text-amber-500 tracking-tight">
+                                  {"★".repeat(Math.round(item.avgRating))}
+                                  {"☆".repeat(5 - Math.round(item.avgRating))}
+                                </span>
+                                <span className="font-medium text-stone-600">
+                                  {item.avgRating}
+                                </span>
+                                <span className="text-stone-400">
+                                  ({item.reviewCount})
+                                </span>
+                              </p>
                             )}
                           </div>
-                          {item.description && (
-                            <p className="text-[13px] text-stone-500 mt-1 leading-relaxed">
-                              {item.description}
-                            </p>
-                          )}
-                          {item.avgRating > 0 && (
-                            <p className="mt-1.5 flex items-center gap-1.5 text-[11px]">
-                              <span className="text-amber-500 tracking-tight">
-                                {"★".repeat(Math.round(item.avgRating))}
-                                {"☆".repeat(5 - Math.round(item.avgRating))}
-                              </span>
-                              <span className="font-medium text-stone-600">
-                                {item.avgRating}
-                              </span>
-                              <span className="text-stone-400">
-                                ({item.reviewCount})
-                              </span>
-                            </p>
-                          )}
                         </div>
                         <div className="flex flex-col items-end gap-2.5 shrink-0">
                           <span className="text-[15px] font-semibold text-emerald-900 tabular-nums">

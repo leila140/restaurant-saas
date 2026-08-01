@@ -77,6 +77,7 @@ export default function MenuManager() {
     description: "",
     price: "",
     prepTimeMinutes: 15,
+    photo: "",
   });
   const [editingItem, setEditingItem] = useState(null);
   const [editForm, setEditForm] = useState({});
@@ -102,6 +103,7 @@ export default function MenuManager() {
       description: "",
       price: "",
       prepTimeMinutes: 15,
+      photo: "",
     });
   };
 
@@ -116,6 +118,7 @@ export default function MenuManager() {
       description: item.description,
       price: item.price,
       prepTimeMinutes: item.prepTimeMinutes,
+      photo: item.photo || "",
     });
   };
 
@@ -205,6 +208,14 @@ export default function MenuManager() {
                       className="w-20 px-2 py-1 border rounded text-sm"
                       placeholder="Prix"
                     />
+                    <input
+                      value={editForm.photo}
+                      onChange={(e) =>
+                        setEditForm({ ...editForm, photo: e.target.value })
+                      }
+                      className="flex-1 min-w-40 px-2 py-1 border rounded text-sm"
+                      placeholder="Photo (URL)"
+                    />
                     <button
                       onClick={() => handleSaveEdit(item._id)}
                       className="px-3 py-1 bg-green-600 text-white rounded text-sm"
@@ -232,6 +243,13 @@ export default function MenuManager() {
                         <p className="text-sm text-gray-500">{item.description}</p>
                       )}
                     </div>
+                    {item.photo && (
+                      <img
+                        src={item.photo}
+                        alt={item.name}
+                        className="w-11 h-11 rounded-lg object-cover border border-gray-200"
+                      />
+                    )}
                     <span className="font-semibold text-gray-800">
                       {item.price.toFixed(2)} €
                     </span>
@@ -311,6 +329,14 @@ export default function MenuManager() {
                 placeholder="Description (optionnel)"
                 className="w-full px-2 py-1 border rounded text-sm"
               />
+              <input
+                value={newItem.photo}
+                onChange={(e) =>
+                  setNewItem({ ...newItem, photo: e.target.value })
+                }
+                placeholder="Photo (URL, optionnel)"
+                className="w-full px-2 py-1 border rounded text-sm"
+              />
               <div className="flex gap-2">
                 <button
                   type="submit"
@@ -327,6 +353,7 @@ export default function MenuManager() {
                       description: "",
                       price: "",
                       prepTimeMinutes: 15,
+                      photo: "",
                     })
                   }
                   className="px-3 py-1 bg-gray-300 text-gray-700 rounded text-sm"
