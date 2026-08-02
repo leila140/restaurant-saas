@@ -7,6 +7,7 @@ const navItems = {
     { to: "/dashboard", label: "Dashboard", icon: "📊" },
     { to: "/dashboard/menu", label: "Menu", icon: "🍽️" },
     { to: "/dashboard/orders", label: "Commandes", icon: "📋" },
+    { to: "/dashboard/kitchen", label: "Cuisine", icon: "🍳" },
     { to: "/dashboard/tables", label: "Tables", icon: "🪑" },
     { to: "/dashboard/reservations", label: "Réservations", icon: "📅" },
     { to: "/dashboard/staff", label: "Équipe", icon: "👥" },
@@ -15,11 +16,13 @@ const navItems = {
   manager: [
     { to: "/dashboard", label: "Dashboard", icon: "📊" },
     { to: "/dashboard/orders", label: "Commandes", icon: "📋" },
+    { to: "/dashboard/kitchen", label: "Cuisine", icon: "🍳" },
     { to: "/dashboard/tables", label: "Tables", icon: "🪑" },
     { to: "/dashboard/reservations", label: "Réservations", icon: "📅" },
   ],
   kitchen: [
     { to: "/dashboard/orders", label: "Commandes", icon: "📋" },
+    { to: "/dashboard/kitchen", label: "Cuisine", icon: "🍳" },
   ],
   server: [
     { to: "/dashboard/orders", label: "Commandes", icon: "📋" },
