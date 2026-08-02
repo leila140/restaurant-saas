@@ -64,6 +64,7 @@ exports.getBySlug = async (req, res) => {
       logo: restaurant.logo,
       address: restaurant.address,
       phone: restaurant.phone,
+      openingHours: restaurant.openingHours,
       menu,
     });
   } catch (err) {
@@ -84,6 +85,7 @@ exports.getMyRestaurant = async (req, res) => {
       logo: restaurant.logo,
       address: restaurant.address,
       phone: restaurant.phone,
+      openingHours: restaurant.openingHours,
     });
   } catch (err) {
     res.status(500).json({ error: "Internal server error" });
@@ -92,7 +94,7 @@ exports.getMyRestaurant = async (req, res) => {
 
 exports.updateMyRestaurant = async (req, res) => {
   try {
-    const { name, logo, address, phone } = req.body;
+    const { name, logo, address, phone, openingHours } = req.body;
 
     if (!name || !name.trim()) {
       return res.status(400).json({ error: "Name is required" });
@@ -105,6 +107,16 @@ exports.updateMyRestaurant = async (req, res) => {
         logo: logo || "",
         address: address || "",
         phone: phone || "",
+        ...(Array.isArray(openingHours) && openingHours.length === 7
+          ? {
+              openingHours: openingHours.map((s) => ({
+                day: s.day,
+                open: s.open || "10:00",
+                close: s.close || "22:00",
+                closed: !!s.closed,
+              })),
+            }
+          : {}),
       },
       { new: true }
     );
@@ -119,6 +131,7 @@ exports.updateMyRestaurant = async (req, res) => {
       logo: restaurant.logo,
       address: restaurant.address,
       phone: restaurant.phone,
+      openingHours: restaurant.openingHours,
     });
   } catch (err) {
     res.status(500).json({ error: "Internal server error" });

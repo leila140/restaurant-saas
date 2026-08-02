@@ -1,5 +1,8 @@
 const Order = require("../models/Order");
 const Table = require("../models/Table");
+const Restaurant = require("../models/Restaurant");
+const { isOpenNow } = require("../utils/hours");
+const { sendSMS } = require("../services/notify");
 const MenuItem = require("../models/MenuItem");
 const MenuCategory = require("../models/MenuCategory");
 
@@ -130,7 +133,7 @@ exports.getStats = async (req, res) => {
 // Client creates an order (no auth required)
 exports.createOrder = async (req, res) => {
   try {
-    const { restaurantId, tableId, items } = req.body;
+    const { restaurantId, tableId, items, customerPhone } = req.body;
 
     if (!restaurantId || !tableId || !items?.length) {
       return res
@@ -143,6 +146,14 @@ exports.createOrder = async (req, res) => {
       return res.status(404).json({ error: "Table not found" });
     }
 
+    const restaurant = await Restaurant.findById(restaurantId);
+    if (!restaurant) {
+      return res.status(404).json({ error: "Restaurant not found" });
+    }
+    if (!isOpenNow(restaurant.openingHours)) {
+      return res.status(409).json({ error: "Le restaurant est fermé" });
+    }
+
     const totalPrice = items.reduce(
       (sum, item) => sum + item.price * item.quantity,
       0
@@ -153,6 +164,7 @@ exports.createOrder = async (req, res) => {
       tableId,
       items,
       totalPrice,
+      customerPhone: customerPhone || "",
     });
 
     const populated = await order.populate("tableId", "number");
@@ -192,6 +204,98 @@ exports.getOrders = async (req, res) => {
       .sort({ createdAt: -1 });
 
     res.json(orders);
+  } catch (err) {
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+// Staff: open bills grouped by table
+exports.getOpenBills = async (req, res) => {
+  try {
+    const openOrders = await Order.find({
+      restaurantId: req.restaurantId,
+      status: { $nin: ["paid", "cancelled"] },
+    }).populate("tableId", "number");
+
+    const byTable = {};
+    openOrders.forEach((order) => {
+      const key = String(order.tableId._id);
+      if (!byTable[key]) {
+        byTable[key] = {
+          tableId: order.tableId._id,
+          tableNumber: order.tableId.number,
+          orders: [],
+          total: 0,
+          count: 0,
+        };
+      }
+      byTable[key].orders.push(order);
+      byTable[key].total += order.totalPrice;
+      byTable[key].count += 1;
+    });
+
+    const bills = Object.values(byTable).sort(
+      (a, b) => a.tableNumber - b.tableNumber
+    );
+    res.json(bills);
+  } catch (err) {
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+// Staff: mark all open orders for a table as paid and free the table
+exports.checkoutTable = async (req, res) => {
+  try {
+    const { tableId } = req.body;
+    if (!tableId) {
+      return res.status(400).json({ error: "tableId is required" });
+    }
+
+    const table = await Table.findOne({
+      _id: tableId,
+      restaurantId: req.restaurantId,
+    });
+    if (!table) {
+      return res.status(404).json({ error: "Table not found" });
+    }
+
+    const openOrders = await Order.find({
+      restaurantId: req.restaurantId,
+      tableId,
+      status: { $nin: ["paid", "cancelled"] },
+    });
+
+    if (openOrders.length === 0) {
+      return res.status(400).json({ error: "No open orders for this table" });
+    }
+
+    const updated = await Order.updateMany(
+      { _id: { $in: openOrders.map((o) => o._id) } },
+      { status: "paid" }
+    );
+
+    const freeTable = await Table.findByIdAndUpdate(
+      tableId,
+      { status: "free" },
+      { new: true }
+    );
+
+    const io = req.app.get("io");
+    if (io) {
+      openOrders.forEach((o) => {
+        o.status = "paid";
+        io.to(`restaurant:${req.restaurantId}`).emit("order:statusChanged", o);
+      });
+      io.to(`restaurant:${req.restaurantId}`).emit(
+        "table:statusChanged",
+        freeTable
+      );
+      io.to(`restaurant:${req.restaurantId}`).emit("orders:checkout", {
+        tableId,
+      });
+    }
+
+    res.json({ paid: updated.modifiedCount, table: freeTable });
   } catch (err) {
     res.status(500).json({ error: "Internal server error" });
   }
@@ -246,6 +350,18 @@ exports.updateStatus = async (req, res) => {
       io.to(`restaurant:${req.restaurantId}`).emit("order:statusChanged", order);
       if (table) {
         io.to(`restaurant:${req.restaurantId}`).emit("table:statusChanged", table);
+      }
+    }
+
+    // Notify client by SMS when their order is ready
+    if (status === "ready" && order.customerPhone) {
+      try {
+        await sendSMS({
+          to: order.customerPhone,
+          body: `Votre commande (Table ${order.tableId?.number || "?"}) est prête ! Bon appétit.`,
+        });
+      } catch (err) {
+        console.error("Ready SMS error:", err.message);
       }
     }
 

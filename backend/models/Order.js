@@ -40,6 +40,11 @@ const orderSchema = new mongoose.Schema(
       ref: "Table",
       required: true,
     },
+    customerPhone: {
+      type: String,
+      default: "",
+      trim: true,
+    },
     items: {
       type: [orderItemSchema],
       required: true,

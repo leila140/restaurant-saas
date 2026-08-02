@@ -1,5 +1,29 @@
 const mongoose = require("mongoose");
 
+const openingHoursSchema = new mongoose.Schema(
+  {
+    day: {
+      type: Number,
+      required: true,
+      min: 0,
+      max: 6,
+    },
+    open: {
+      type: String,
+      default: "10:00",
+    },
+    close: {
+      type: String,
+      default: "22:00",
+    },
+    closed: {
+      type: Boolean,
+      default: false,
+    },
+  },
+  { _id: false }
+);
+
 const restaurantSchema = new mongoose.Schema(
   {
     name: {
@@ -25,6 +49,16 @@ const restaurantSchema = new mongoose.Schema(
     phone: {
       type: String,
       default: "",
+    },
+    openingHours: {
+      type: [openingHoursSchema],
+      default: () =>
+        Array.from({ length: 7 }, (_, day) => ({
+          day,
+          open: "10:00",
+          close: "22:00",
+          closed: false,
+        })),
     },
     subscriptionPlan: {
       type: String,

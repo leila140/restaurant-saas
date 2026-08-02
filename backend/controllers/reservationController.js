@@ -1,10 +1,19 @@
 const Reservation = require("../models/Reservation");
 const Table = require("../models/Table");
+const Restaurant = require("../models/Restaurant");
+const { sendEmail } = require("../services/notify");
 
 exports.createReservation = async (req, res) => {
   try {
-    const { restaurantId, customerName, customerPhone, date, time, partySize } =
-      req.body;
+    const {
+      restaurantId,
+      customerName,
+      customerPhone,
+      customerEmail,
+      date,
+      time,
+      partySize,
+    } = req.body;
 
     if (!restaurantId || !customerName || !customerPhone || !date || !time || !partySize) {
       return res.status(400).json({ error: "All fields are required" });
@@ -24,6 +33,7 @@ exports.createReservation = async (req, res) => {
       restaurantId,
       customerName,
       customerPhone,
+      customerEmail: customerEmail || "",
       date: reservationDate,
       time,
       partySize,
@@ -116,6 +126,20 @@ exports.updateReservation = async (req, res) => {
     const io = req.app.get("io");
     if (io && table) {
       io.to(`restaurant:${req.restaurantId}`).emit("table:statusChanged", table);
+    }
+
+    if (reservation.status === "confirmed" && reservation.customerEmail) {
+      try {
+        const restaurant = await Restaurant.findById(req.restaurantId);
+        const when = `${new Date(reservation.date).toLocaleDateString("fr-FR")} à ${reservation.time}`;
+        await sendEmail({
+          to: reservation.customerEmail,
+          subject: `Réservation confirmée — ${restaurant?.name || "Restaurant"}`,
+          text: `Bonjour ${reservation.customerName},\n\nVotre réservation est confirmée : ${when} pour ${reservation.partySize} personne${reservation.partySize > 1 ? "s" : ""}${populated.tableId?.number ? ` · Table ${populated.tableId.number}` : ""}.\n\nÀ bientôt chez ${restaurant?.name || ""} !`,
+        });
+      } catch (err) {
+        console.error("Confirmation email error:", err.message);
+      }
     }
 
     res.json(populated);
