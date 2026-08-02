@@ -338,34 +338,48 @@ export default function TablesView() {
                             </button>
                           ))}
                         </div>
-                        <div className="flex items-center gap-2 mt-3">
+                        <div className="flex items-center justify-end gap-2 mt-3">
                           <button
+                            title="QR code"
                             onClick={() => handleQR(table._id)}
-                            className="px-3 py-1.5 rounded-full border border-stone-200 text-stone-600 text-xs font-medium hover:border-emerald-900 hover:text-emerald-900 transition-colors"
+                            className="w-8 h-8 rounded-full border border-stone-200 text-stone-500 hover:border-emerald-900 hover:text-emerald-900 hover:bg-emerald-50 transition-colors flex items-center justify-center"
                           >
-                            QR
+                            <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                              <rect x="3" y="3" width="7" height="7" rx="1" />
+                              <rect x="14" y="3" width="7" height="7" rx="1" />
+                              <rect x="3" y="14" width="7" height="7" rx="1" />
+                              <path d="M14 14h3v3h-3zM21 14v.01M14 21h.01M18 18h.01M21 21h-3v-3" />
+                            </svg>
                           </button>
-                          {user.role === "owner" ||
-                          user.role === "manager" ? (
+                          {user.role === "owner" || user.role === "manager" ? (
                             <>
                               <button
+                                title="Modifier"
                                 onClick={() => {
                                   setEditId(table._id);
                                   setEditNumber(table.number);
                                   setEditCapacity(table.capacity);
                                 }}
-                                className="px-3 py-1.5 rounded-full border border-stone-200 text-stone-600 text-xs font-medium hover:border-stone-500 hover:text-stone-900 transition-colors"
+                                className="w-8 h-8 rounded-full border border-stone-200 text-stone-500 hover:border-emerald-900 hover:text-emerald-900 hover:bg-emerald-50 transition-colors flex items-center justify-center"
                               >
-                                Modifier
+                                <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                                  <path d="M12 20h9" />
+                                  <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+                                </svg>
                               </button>
                               <button
+                                title="Supprimer"
                                 onClick={() => {
                                   if (confirm("Supprimer cette table ?"))
                                     deleteMutation.mutate(table._id);
                                 }}
-                                className="ml-auto px-3 py-1.5 rounded-full border border-rose-200 text-rose-600 text-xs font-medium hover:border-rose-400 hover:text-rose-700 transition-colors"
+                                className="w-8 h-8 rounded-full border border-stone-200 text-stone-500 hover:border-rose-400 hover:text-rose-600 hover:bg-rose-50 transition-colors flex items-center justify-center"
                               >
-                                Supprimer
+                                <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                                  <path d="M3 6h18" />
+                                  <path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2" />
+                                  <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                                </svg>
                               </button>
                             </>
                           ) : null}
