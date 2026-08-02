@@ -96,24 +96,53 @@ export default function OrdersView() {
     onError: () => toast.error("Erreur lors du changement de statut"),
   });
 
+  const isServerLike = role === "owner" || role === "manager" || role === "server";
+
+  const { data: bills = [] } = useQuery({
+    queryKey: ["orders", restaurantId, "bills"],
+    queryFn: () => api.get("/orders/bills").then((r) => r.data),
+    enabled: !!restaurantId && isServerLike,
+    refetchInterval: 15000,
+  });
+
+  const checkoutMutation = useMutation({
+    mutationFn: (tableId) => api.post("/orders/checkout", { tableId }),
+    onSuccess: () => {
+      queryClient.invalidateQueries(["orders", restaurantId]);
+      queryClient.invalidateQueries(["tables", restaurantId]);
+      queryClient.invalidateQueries(["orders", restaurantId, "bills"]);
+      toast.success("Addition encaissée, table libérée");
+    },
+    onError: () => toast.error("Erreur lors de l'encaissement"),
+  });
+
   useEffect(() => {
     if (!on || !off) return;
 
     const handleNewOrder = () => {
       if (soundEnabled) playNewOrderSound();
       queryClient.invalidateQueries(["orders", restaurantId]);
+      queryClient.invalidateQueries(["orders", restaurantId, "bills"]);
     };
 
     const handleStatusChanged = () => {
       queryClient.invalidateQueries(["orders", restaurantId]);
+      queryClient.invalidateQueries(["orders", restaurantId, "bills"]);
+    };
+
+    const handleCheckout = () => {
+      queryClient.invalidateQueries(["orders", restaurantId, "bills"]);
+      queryClient.invalidateQueries(["tables", restaurantId]);
     };
 
     on("order:new", handleNewOrder);
     on("order:statusChanged", handleStatusChanged);
+    on("orders:checkout", handleCheckout);
 
     return () => {
       off("order:new", handleNewOrder);
       off("order:statusChanged", handleStatusChanged);
+      off("orders:checkout", handleCheckout);
     };
   }, [on, off, restaurantId, queryClient, soundEnabled]);
 
@@ -318,6 +347,62 @@ export default function OrdersView() {
       </div>
 
       <div className="space-y-6">
+        {isServerLike && bills.length > 0 && (
+          <div>
+            <h2 className="text-lg font-semibold text-gray-700 mb-3">
+              💰 Additions en cours ({bills.length})
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {bills.map((bill) => (
+                <div
+                  key={bill.tableId}
+                  className="bg-white rounded-xl border border-gray-200 p-4"
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-bold text-lg">
+                      Table {bill.tableNumber}
+                    </span>
+                    <span className="font-display text-xl font-semibold text-emerald-900 tabular-nums">
+                      {bill.total.toFixed(2)} €
+                    </span>
+                  </div>
+                  <div className="space-y-1 mb-3 max-h-40 overflow-auto">
+                    {bill.orders.map((order) =>
+                      order.items.map((item, i) => (
+                        <div
+                          key={`${order._id}-${i}`}
+                          className="flex justify-between text-sm"
+                        >
+                          <span className="text-gray-700">
+                            {item.quantity}x {item.name}
+                          </span>
+                          <span className="font-medium text-gray-600">
+                            {(item.price * item.quantity).toFixed(2)} €
+                          </span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                  <button
+                    onClick={() => {
+                      if (
+                        confirm(
+                          `Encaisser l'addition de la table ${bill.tableNumber} (${bill.total.toFixed(2)} €) ?`
+                        )
+                      )
+                        checkoutMutation.mutate(bill.tableId);
+                    }}
+                    disabled={checkoutMutation.isPending}
+                    className="w-full px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm rounded-lg font-medium transition-colors disabled:opacity-50"
+                  >
+                    Encaisser — {bill.total.toFixed(2)} €
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {role !== "server" && grouped.kitchen.length > 0 && (
           <div>
             <h2 className="text-lg font-semibold text-gray-700 mb-3">

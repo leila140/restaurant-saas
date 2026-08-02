@@ -5,6 +5,7 @@ import toast from "react-hot-toast";
 import api from "../../services/api";
 import Confetti from "../../components/Confetti";
 import OrderTracking from "../../components/OrderTracking";
+import { todayStatus } from "../../utils/hours";
 
 export default function MenuView() {
   const { slug, token } = useParams();
@@ -13,6 +14,7 @@ export default function MenuView() {
   const [tableNumber, setTableNumber] = useState(null);
   const [showCart, setShowCart] = useState(false);
   const [confettiActive, setConfettiActive] = useState(false);
+  const [customerPhone, setCustomerPhone] = useState("");
 
   const orderStorageKey = `lastOrder:${token}`;
   const getStoredOrder = () => {
@@ -117,6 +119,7 @@ export default function MenuView() {
       restaurantId: restaurant._id,
       tableId,
       items: cart,
+      customerPhone: customerPhone.trim() || undefined,
     });
   };
 
@@ -137,6 +140,7 @@ export default function MenuView() {
   }
 
   const initial = (restaurant.name || "R").trim().charAt(0).toUpperCase();
+  const openStatus = todayStatus(restaurant.openingHours);
 
   return (
     <div className="min-h-screen bg-white pb-28">
@@ -167,6 +171,22 @@ export default function MenuView() {
           <p className="text-[10px] uppercase tracking-[0.28em] text-emerald-800 font-semibold">
             {tableNumber ? `Bienvenue · Table ${tableNumber}` : "Bienvenue"}
           </p>
+          {openStatus.label && (
+            <span
+              className={`inline-flex items-center gap-1.5 mt-3 px-3 py-1 rounded-full border text-[11px] font-semibold ${
+                openStatus.open
+                  ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                  : "border-stone-200 bg-stone-50 text-stone-500"
+              }`}
+            >
+              <span
+                className={`w-1.5 h-1.5 rounded-full ${
+                  openStatus.open ? "bg-emerald-500" : "bg-stone-400"
+                }`}
+              />
+              {openStatus.label}
+            </span>
+          )}
           <h2 className="font-display text-3xl font-semibold text-stone-900 mt-3 leading-snug">
             {restaurant.name}
           </h2>
@@ -426,6 +446,18 @@ export default function MenuView() {
             </div>
             {cart.length > 0 && (
               <div className="px-6 py-5 border-t border-stone-100">
+                <div className="mb-4">
+                  <label className="block text-xs text-stone-500 mb-1.5">
+                    Téléphone (optionnel) — pour être prévenu quand c'est prêt
+                  </label>
+                  <input
+                    type="tel"
+                    value={customerPhone}
+                    onChange={(e) => setCustomerPhone(e.target.value)}
+                    placeholder="06 12 34 56 78"
+                    className="w-full px-3 py-2 border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-800/20 placeholder:text-stone-400"
+                  />
+                </div>
                 <div className="flex justify-between items-center mb-4">
                   <span className="font-medium text-stone-500">Total</span>
                   <span className="font-display text-2xl font-semibold text-emerald-900 tabular-nums">
@@ -434,10 +466,14 @@ export default function MenuView() {
                 </div>
                 <button
                   onClick={handleOrder}
-                  disabled={!tableId || orderMutation.isPending}
+                  disabled={!tableId || !openStatus.open || orderMutation.isPending}
                   className="w-full py-3.5 bg-emerald-900 hover:bg-emerald-800 text-white rounded-full font-semibold disabled:opacity-50 transition-colors"
                 >
-                  {orderMutation.isPending ? "Envoi..." : "Confirmer la commande"}
+                  {!openStatus.open
+                    ? "Le restaurant est fermé"
+                    : orderMutation.isPending
+                      ? "Envoi..."
+                      : "Confirmer la commande"}
                 </button>
                 {!tableId && (
                   <p className="text-xs text-red-500 text-center mt-2">

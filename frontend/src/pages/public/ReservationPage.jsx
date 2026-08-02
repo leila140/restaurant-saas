@@ -3,12 +3,14 @@ import { useParams, Link } from "react-router-dom";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import api from "../../services/api";
+import { todayStatus } from "../../utils/hours";
 
 export default function ReservationPage() {
   const { slug } = useParams();
   const [form, setForm] = useState({
     customerName: "",
     customerPhone: "",
+    customerEmail: "",
     date: "",
     time: "",
     partySize: 2,
@@ -95,6 +97,26 @@ export default function ReservationPage() {
         <p className="text-[15px] text-stone-500 mt-3 leading-relaxed max-w-sm mx-auto">
           Nous confirmons votre réservation en quelques minutes.
         </p>
+        {(() => {
+          const status = todayStatus(restaurant.openingHours);
+          if (!status.label) return null;
+          return (
+            <span
+              className={`inline-flex items-center gap-1.5 mt-4 px-3 py-1 rounded-full border text-[11px] font-semibold ${
+                status.open
+                  ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                  : "border-stone-200 bg-stone-50 text-stone-500"
+              }`}
+            >
+              <span
+                className={`w-1.5 h-1.5 rounded-full ${
+                  status.open ? "bg-emerald-500" : "bg-stone-400"
+                }`}
+              />
+              {status.label}
+            </span>
+          );
+        })()}
         <div className="mt-8 flex items-center justify-center gap-3">
           <span className="h-px w-12 bg-stone-200" />
           <span className="text-[10px] uppercase tracking-[0.2em] text-stone-400">Détails</span>
@@ -155,6 +177,16 @@ export default function ReservationPage() {
                 placeholder="06 12 34 56 78"
                 className={fieldClass}
                 required
+              />
+            </div>
+            <div>
+              <label className={labelClass}>Email (pour la confirmation)</label>
+              <input
+                type="email"
+                value={form.customerEmail}
+                onChange={update("customerEmail")}
+                placeholder="jean@exemple.fr"
+                className={fieldClass}
               />
             </div>
             <div className="grid grid-cols-2 gap-3">
