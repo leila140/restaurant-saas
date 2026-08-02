@@ -11,7 +11,6 @@ import Register from "./pages/auth/Register";
 import Dashboard from "./pages/dashboard/Dashboard";
 import MenuManager from "./pages/dashboard/MenuManager";
 import OrdersView from "./pages/dashboard/OrdersView";
-import KitchenView from "./pages/dashboard/KitchenView";
 import TablesView from "./pages/dashboard/TablesView";
 import ReservationsView from "./pages/dashboard/ReservationsView";
 import StaffManager from "./pages/dashboard/StaffManager";
@@ -62,14 +61,6 @@ function App() {
                 }
               />
               <Route path="orders" element={<OrdersView />} />
-              <Route
-                path="kitchen"
-                element={
-                  <ProtectedRoute allowedRoles={["owner", "manager", "kitchen"]}>
-                    <KitchenView />
-                  </ProtectedRoute>
-                }
-              />
               <Route path="tables" element={<TablesView />} />
               <Route path="reservations" element={<ReservationsView />} />
               <Route
