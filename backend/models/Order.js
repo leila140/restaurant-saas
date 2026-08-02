@@ -63,6 +63,29 @@ const orderSchema = new mongoose.Schema(
       required: true,
       min: 0,
     },
+    paymentMethod: {
+      type: String,
+      enum: ["cash", "card"],
+      default: "cash",
+    },
+    discountPercent: {
+      type: Number,
+      default: 0,
+      min: 0,
+      max: 100,
+    },
+    tip: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    paidAt: {
+      type: Date,
+    },
+    receiptNumber: {
+      type: Number,
+      default: 0,
+    },
   },
   { timestamps: true }
 );

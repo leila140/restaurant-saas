@@ -26,6 +26,20 @@ router.post(
   roleCheck(["owner", "manager", "server"]),
   orderController.checkoutTable
 );
+router.get(
+  "/receipts",
+  auth,
+  tenant,
+  roleCheck(["owner", "manager", "server"]),
+  orderController.getReceipts
+);
+router.get(
+  "/receipt/:receiptNumber",
+  auth,
+  tenant,
+  roleCheck(["owner", "manager", "server"]),
+  orderController.getReceipt
+);
 router.get("/:id", auth, tenant, orderController.getOrder);
 router.patch("/:id/status", auth, tenant, orderController.updateStatus);
 

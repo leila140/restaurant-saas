@@ -27,7 +27,10 @@ exports.getStats = async (req, res) => {
       (o) => o.status === "paid" || o.status === "served"
     );
 
-    const totalRevenue = revenueOrders.reduce((s, o) => s + o.totalPrice, 0);
+    const effectiveTotal = (o) =>
+      o.totalPrice * (1 - (o.discountPercent || 0) / 100) + (o.tip || 0);
+
+    const totalRevenue = revenueOrders.reduce((s, o) => s + effectiveTotal(o), 0);
     const totalOrders = active.length;
     const avgOrderValue = totalOrders ? totalRevenue / totalOrders : 0;
 
@@ -58,7 +61,7 @@ exports.getStats = async (req, res) => {
     });
     revenueOrders.forEach((o) => {
       const key = keyOf(o.createdAt);
-      if (key in dayIndex) revenueByDay[dayIndex[key]].revenue += o.totalPrice;
+      if (key in dayIndex) revenueByDay[dayIndex[key]].revenue += effectiveTotal(o);
     });
 
     // Top items by quantity
@@ -246,10 +249,17 @@ exports.getOpenBills = async (req, res) => {
 // Staff: mark all open orders for a table as paid and free the table
 exports.checkoutTable = async (req, res) => {
   try {
-    const { tableId } = req.body;
+    const { tableId, paymentMethod = "cash", discountPercent = 0, tip = 0 } =
+      req.body;
     if (!tableId) {
       return res.status(400).json({ error: "tableId is required" });
     }
+
+    if (!["cash", "card"].includes(paymentMethod)) {
+      return res.status(400).json({ error: "Invalid payment method" });
+    }
+    const discount = Math.max(0, Math.min(100, Number(discountPercent) || 0));
+    const tipAmount = Math.max(0, Number(tip) || 0);
 
     const table = await Table.findOne({
       _id: tableId,
@@ -269,9 +279,24 @@ exports.checkoutTable = async (req, res) => {
       return res.status(400).json({ error: "No open orders for this table" });
     }
 
-    const updated = await Order.updateMany(
+    const restaurant = await Restaurant.findByIdAndUpdate(
+      req.restaurantId,
+      { $inc: { receiptCounter: 1 } },
+      { new: true }
+    );
+    const receiptNumber = restaurant ? restaurant.receiptCounter : 0;
+    const paidAt = new Date();
+
+    await Order.updateMany(
       { _id: { $in: openOrders.map((o) => o._id) } },
-      { status: "paid" }
+      {
+        status: "paid",
+        paymentMethod,
+        discountPercent: discount,
+        tip: tipAmount,
+        paidAt,
+        receiptNumber,
+      }
     );
 
     const freeTable = await Table.findByIdAndUpdate(
@@ -279,6 +304,27 @@ exports.checkoutTable = async (req, res) => {
       { status: "free" },
       { new: true }
     );
+
+    const subtotal = Math.round(
+      openOrders.reduce((s, o) => s + o.totalPrice, 0) * 100
+    ) / 100;
+    const discountAmount =
+      Math.round(subtotal * (discount / 100) * 100) / 100;
+    const total = Math.round((subtotal - discountAmount + tipAmount) * 100) / 100;
+
+    const receipt = {
+      receiptNumber,
+      tableId: table._id,
+      tableNumber: table.number,
+      paymentMethod,
+      discountPercent: discount,
+      discountAmount,
+      tip: tipAmount,
+      subtotal,
+      total,
+      paidAt,
+      orders: openOrders,
+    };
 
     const io = req.app.get("io");
     if (io) {
@@ -292,10 +338,111 @@ exports.checkoutTable = async (req, res) => {
       );
       io.to(`restaurant:${req.restaurantId}`).emit("orders:checkout", {
         tableId,
+        receipt,
       });
     }
 
-    res.json({ paid: updated.modifiedCount, table: freeTable });
+    res.json({ paid: openOrders.length, table: freeTable, receipt });
+  } catch (err) {
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+// Staff: recent receipts, grouped by receipt number
+exports.getReceipts = async (req, res) => {
+  try {
+    const paidOrders = await Order.find({
+      restaurantId: req.restaurantId,
+      status: "paid",
+      receiptNumber: { $gt: 0 },
+    }).populate("tableId", "number");
+
+    const byReceipt = {};
+    paidOrders.forEach((o) => {
+      const key = String(o.receiptNumber);
+      if (!byReceipt[key]) {
+        byReceipt[key] = {
+          receiptNumber: o.receiptNumber,
+          tableNumber: o.tableId?.number,
+          paymentMethod: o.paymentMethod,
+          discountPercent: o.discountPercent || 0,
+          tip: o.tip || 0,
+          subtotal: 0,
+          count: 0,
+          paidAt: o.paidAt || o.updatedAt,
+        };
+      }
+      const b = byReceipt[key];
+      b.subtotal += o.totalPrice;
+      b.count += 1;
+    });
+
+    const receipts = Object.values(byReceipt)
+      .map((b) => {
+        const discountAmount =
+          Math.round(b.subtotal * (b.discountPercent / 100) * 100) / 100;
+        return {
+          ...b,
+          subtotal: Math.round(b.subtotal * 100) / 100,
+          discountAmount,
+          total: Math.round((b.subtotal - discountAmount + b.tip) * 100) / 100,
+        };
+      })
+      .sort((a, b2) => b2.receiptNumber - a.receiptNumber)
+      .slice(0, 20);
+
+    res.json(receipts);
+  } catch (err) {
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+// Staff: single receipt detail by number
+exports.getReceipt = async (req, res) => {
+  try {
+    const receiptNumber = parseInt(req.params.receiptNumber, 10);
+    if (!receiptNumber || receiptNumber <= 0) {
+      return res.status(400).json({ error: "Invalid receipt number" });
+    }
+
+    const restaurant = await Restaurant.findById(req.restaurantId);
+    const orders = await Order.find({
+      restaurantId: req.restaurantId,
+      receiptNumber,
+    }).populate("tableId", "number");
+
+    if (orders.length === 0) {
+      return res.status(404).json({ error: "Receipt not found" });
+    }
+
+    const first = orders[0];
+    const subtotal = Math.round(
+      orders.reduce((s, o) => s + o.totalPrice, 0) * 100
+    ) / 100;
+    const discountPercent = first.discountPercent || 0;
+    const discountAmount =
+      Math.round(subtotal * (discountPercent / 100) * 100) / 100;
+    const tip = first.tip || 0;
+    const total = Math.round((subtotal - discountAmount + tip) * 100) / 100;
+
+    res.json({
+      receiptNumber,
+      restaurant: {
+        name: restaurant?.name || "",
+        logo: restaurant?.logo || "",
+        address: restaurant?.address || "",
+        phone: restaurant?.phone || "",
+      },
+      tableNumber: first.tableId?.number,
+      paymentMethod: first.paymentMethod,
+      discountPercent,
+      discountAmount,
+      tip,
+      subtotal,
+      total,
+      paidAt: first.paidAt || first.updatedAt,
+      orders,
+    });
   } catch (err) {
     res.status(500).json({ error: "Internal server error" });
   }

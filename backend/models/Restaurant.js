@@ -70,6 +70,10 @@ const restaurantSchema = new mongoose.Schema(
       enum: ["active", "inactive", "trial"],
       default: "trial",
     },
+    receiptCounter: {
+      type: Number,
+      default: 0,
+    },
   },
   { timestamps: true }
 );
