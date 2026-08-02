@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import api from "../../services/api";
@@ -24,18 +24,20 @@ export default function Settings() {
   const { data, isLoading } = useQuery({
     queryKey: ["restaurant", "me"],
     queryFn: () => api.get("/restaurants/me").then((r) => r.data),
-    onSuccess: (data) => {
-      setForm({
-        name: data.name || "",
-        logo: data.logo || "",
-        address: data.address || "",
-        phone: data.phone || "",
-      });
-      if (Array.isArray(data.openingHours) && data.openingHours.length === 7) {
-        setHours(data.openingHours);
-      }
-    },
   });
+
+  useEffect(() => {
+    if (!data) return;
+    setForm({
+      name: data.name || "",
+      logo: data.logo || "",
+      address: data.address || "",
+      phone: data.phone || "",
+    });
+    if (Array.isArray(data.openingHours) && data.openingHours.length === 7) {
+      setHours(data.openingHours);
+    }
+  }, [data]);
 
   const saveMutation = useMutation({
     mutationFn: (payload) => api.put("/restaurants/me", payload),
