@@ -97,11 +97,25 @@ exports.updateReservation = async (req, res) => {
     await reservation.save();
     const populated = await reservation.populate("tableId", "number");
 
+    let table;
     if (tableId && status === "confirmed") {
-      await Table.findByIdAndUpdate(tableId, { status: "reserved" });
+      table = await Table.findByIdAndUpdate(
+        tableId,
+        { status: "reserved" },
+        { new: true }
+      );
     }
     if (reservation.tableId && status === "cancelled") {
-      await Table.findByIdAndUpdate(reservation.tableId, { status: "free" });
+      table = await Table.findByIdAndUpdate(
+        reservation.tableId,
+        { status: "free" },
+        { new: true }
+      );
+    }
+
+    const io = req.app.get("io");
+    if (io && table) {
+      io.to(`restaurant:${req.restaurantId}`).emit("table:statusChanged", table);
     }
 
     res.json(populated);
@@ -121,8 +135,18 @@ exports.deleteReservation = async (req, res) => {
       return res.status(404).json({ error: "Reservation not found" });
     }
 
+    let table = null;
     if (reservation.tableId) {
-      await Table.findByIdAndUpdate(reservation.tableId, { status: "free" });
+      table = await Table.findByIdAndUpdate(
+        reservation.tableId,
+        { status: "free" },
+        { new: true }
+      );
+    }
+
+    const io = req.app.get("io");
+    if (io && table) {
+      io.to(`restaurant:${req.restaurantId}`).emit("table:statusChanged", table);
     }
 
     res.json({ message: "Reservation deleted" });

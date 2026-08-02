@@ -9,6 +9,8 @@ const roleCheck = require("../middleware/roleCheck");
 router.get("/token/:token", tableController.getByToken);
 
 // Staff routes
+router.get("/availability", auth, tenant, tableController.getAvailability);
+router.get("/qr/print", auth, tenant, tableController.getPrintQRs);
 router.get("/", auth, tenant, tableController.getTables);
 router.post(
   "/",

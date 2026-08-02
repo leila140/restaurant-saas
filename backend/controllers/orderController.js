@@ -157,10 +157,20 @@ exports.createOrder = async (req, res) => {
 
     const populated = await order.populate("tableId", "number");
 
+    // Mark table occupied
+    const updatedTable = await Table.findByIdAndUpdate(
+      tableId,
+      { status: "occupied" },
+      { new: true }
+    );
+
     // Emit via Socket.io
     const io = req.app.get("io");
     if (io) {
       io.to(`restaurant:${restaurantId}`).emit("order:new", populated);
+      if (updatedTable) {
+        io.to(`restaurant:${restaurantId}`).emit("table:statusChanged", updatedTable);
+      }
     }
 
     res.status(201).json(populated);
@@ -215,16 +225,28 @@ exports.updateStatus = async (req, res) => {
     }
 
     // Update table status based on order status
+    let table;
     if (status === "paid" || status === "cancelled") {
-      await Table.findByIdAndUpdate(order.tableId._id, { status: "free" });
+      table = await Table.findByIdAndUpdate(
+        order.tableId._id,
+        { status: "free" },
+        { new: true }
+      );
     } else if (status === "pending" || status === "preparing") {
-      await Table.findByIdAndUpdate(order.tableId._id, { status: "occupied" });
+      table = await Table.findByIdAndUpdate(
+        order.tableId._id,
+        { status: "occupied" },
+        { new: true }
+      );
     }
 
     // Emit via Socket.io
     const io = req.app.get("io");
     if (io) {
       io.to(`restaurant:${req.restaurantId}`).emit("order:statusChanged", order);
+      if (table) {
+        io.to(`restaurant:${req.restaurantId}`).emit("table:statusChanged", table);
+      }
     }
 
     res.json(order);
