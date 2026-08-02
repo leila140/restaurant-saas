@@ -7,17 +7,31 @@ import { useAuth } from "../../context/AuthContext";
 import EmptyState from "../../components/EmptyState";
 import { SkeletonGrid } from "../../components/Skeleton";
 
-const statusColors = {
-  free: "bg-green-100 border-green-300 text-green-700",
-  occupied: "bg-red-100 border-red-300 text-red-700",
-  reserved: "bg-yellow-100 border-yellow-300 text-yellow-700",
-};
+const STATUS = ["free", "occupied", "reserved"];
 
 const statusLabels = {
   free: "Libre",
   occupied: "Occupée",
   reserved: "Réservée",
 };
+
+const statusChip = {
+  free: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  occupied: "bg-rose-50 text-rose-700 border-rose-200",
+  reserved: "bg-amber-50 text-amber-700 border-amber-200",
+};
+
+const statusDot = {
+  free: "bg-emerald-500",
+  occupied: "bg-rose-500",
+  reserved: "bg-amber-500",
+};
+
+const inputClass =
+  "w-full px-3 py-2 border border-stone-200 rounded-xl text-sm bg-white text-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-900/15 focus:border-emerald-900/40 transition-shadow";
+
+const canManage = (role) =>
+  role === "owner" || role === "manager" || role === "server";
 
 export default function TablesView() {
   const { user } = useAuth();
@@ -26,6 +40,7 @@ export default function TablesView() {
   const { on, off } = useSocket(restaurantId);
   const [showQR, setShowQR] = useState(null);
   const [showPrint, setShowPrint] = useState(false);
+  const [showAdd, setShowAdd] = useState(false);
   const [newNumber, setNewNumber] = useState("");
   const [newCapacity, setNewCapacity] = useState(4);
   const [editId, setEditId] = useState(null);
@@ -59,6 +74,7 @@ export default function TablesView() {
       queryClient.invalidateQueries(["tables", restaurantId]);
       setNewNumber("");
       setNewCapacity(4);
+      setShowAdd(false);
       toast.success("Table ajoutée");
     },
     onError: () => toast.error("Erreur lors de l'ajout"),
@@ -110,265 +126,370 @@ export default function TablesView() {
 
   if (isLoading) {
     return (
-      <div className="p-4 sm:p-6">
-        <SkeletonGrid count={6} className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4" />
+      <div className="p-4 sm:p-6 lg:p-8">
+        <SkeletonGrid count={6} className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4" />
       </div>
     );
   }
 
+  const counts = STATUS.reduce((acc, s) => {
+    acc[s] = tables.filter((t) => t.status === s).length;
+    return acc;
+  }, {});
+
   return (
-    <div className="p-4 sm:p-6">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">Tables</h1>
-        <button
-          onClick={() => setShowPrint(true)}
-          disabled={tables.length === 0}
-          className="px-3 py-1.5 bg-gray-800 hover:bg-gray-900 text-white rounded-lg text-sm disabled:opacity-40 transition-colors"
-        >
-          🖨️ Tout imprimer
-        </button>
-        {(user.role === "owner" || user.role === "manager") && (
-          <form onSubmit={handleCreate} className="flex flex-wrap gap-2 items-center">
-            <input
-              type="number"
-              value={newNumber}
-              onChange={(e) => setNewNumber(e.target.value)}
-              placeholder="Numéro"
-              className="w-20 px-2 py-1.5 border border-gray-300 rounded-lg text-sm"
-            />
-            <input
-              type="number"
-              value={newCapacity}
-              onChange={(e) => setNewCapacity(parseInt(e.target.value))}
-              placeholder="Places"
-              className="w-16 px-2 py-1.5 border border-gray-300 rounded-lg text-sm"
-            />
+    <div className="p-4 sm:p-6 lg:p-8">
+      <div className="max-w-6xl mx-auto">
+        {/* Header */}
+        <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-5 mb-8">
+          <div>
+            <p className="text-[10px] uppercase tracking-[0.24em] text-emerald-800 font-semibold">
+              Salle
+            </p>
+            <h1 className="font-display text-3xl font-semibold text-stone-900 mt-2">
+              Tables
+            </h1>
+            <p className="text-sm text-stone-500 mt-2">
+              {tables.length > 0
+                ? `${tables.length} table${tables.length > 1 ? "s" : ""} · ${counts.free} libre${counts.free > 1 ? "s" : ""}, ${counts.occupied} occupée${counts.occupied > 1 ? "s" : ""}, ${counts.reserved} réservée${counts.reserved > 1 ? "s" : ""}`
+                : "Ajoutez vos tables pour générer leurs QR codes"}
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2.5">
             <button
-              type="submit"
-              className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-sm"
+              onClick={() => setShowPrint(true)}
+              disabled={tables.length === 0}
+              className="px-5 py-2.5 rounded-full border border-stone-300 text-stone-700 text-sm font-medium hover:border-stone-500 hover:text-stone-900 transition-colors disabled:opacity-40 disabled:pointer-events-none"
             >
-              Ajouter
+              Imprimer les QR
             </button>
+            {(user.role === "owner" || user.role === "manager") && (
+              <button
+                onClick={() => setShowAdd((v) => !v)}
+                className="px-5 py-2.5 rounded-full bg-emerald-900 hover:bg-emerald-800 text-white text-sm font-semibold transition-colors"
+              >
+                {showAdd ? "Annuler" : "Nouvelle table"}
+              </button>
+            )}
+          </div>
+        </header>
+
+        {/* Add form */}
+        {showAdd && (
+          <form
+            onSubmit={handleCreate}
+            className="bg-white rounded-2xl border border-stone-200 p-6 mb-6 animate-fade-up"
+          >
+            <p className="text-[10px] uppercase tracking-[0.22em] text-emerald-800 font-semibold mb-5">
+              Nouvelle table
+            </p>
+            <div className="flex flex-wrap items-end gap-3">
+              <div>
+                <label className="block text-xs font-medium text-stone-500 mb-1.5">
+                  Numéro
+                </label>
+                <input
+                  type="number"
+                  value={newNumber}
+                  onChange={(e) => setNewNumber(e.target.value)}
+                  placeholder="4"
+                  className={`${inputClass} w-28`}
+                  autoFocus
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-stone-500 mb-1.5">
+                  Places
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  value={newCapacity}
+                  onChange={(e) => setNewCapacity(parseInt(e.target.value))}
+                  className={`${inputClass} w-24`}
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={createMutation.isPending}
+                className="px-5 py-2.5 rounded-full bg-emerald-900 hover:bg-emerald-800 text-white text-sm font-semibold transition-colors disabled:opacity-50"
+              >
+                {createMutation.isPending ? "Ajout..." : "Ajouter la table"}
+              </button>
+            </div>
           </form>
         )}
-      </div>
 
-      {/* Tables grid */}
-      {tables.length === 0 ? (
-        <EmptyState
-          icon="🪑"
-          title="Aucune table"
-          subtitle="Ajoute ta première table pour générer son QR code"
-        />
-      ) : (
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-        {tables.map((table) => (
-          <div
-            key={table._id}
-            className={`rounded-xl border-2 p-4 text-center transition-all ${
-              statusColors[table.status] || "border-gray-200"
-            } ${editId === table._id ? "ring-2 ring-emerald-500" : ""}`}
-          >
-            {editId === table._id ? (
-              <div className="space-y-2">
-                <div className="flex gap-2">
-                  <input
-                    type="number"
-                    value={editNumber}
-                    onChange={(e) => setEditNumber(e.target.value)}
-                    className="w-14 px-2 py-1 border rounded text-sm text-center"
-                    autoFocus
-                  />
-                  <input
-                    type="number"
-                    value={editCapacity}
-                    onChange={(e) => setEditCapacity(e.target.value)}
-                    className="w-14 px-2 py-1 border rounded text-sm text-center"
-                    title="Capacité"
-                  />
-                </div>
-                <div className="flex gap-1">
-                  <button
-                    onClick={() =>
-                      updateMutation.mutate({
-                        id: table._id,
-                        number: parseInt(editNumber),
-                        capacity: parseInt(editCapacity),
-                      })
-                    }
-                    className="flex-1 px-2 py-1 bg-green-600 text-white rounded text-xs"
-                  >
-                    OK
-                  </button>
-                  <button
-                    onClick={() => setEditId(null)}
-                    className="flex-1 px-2 py-1 bg-gray-300 text-gray-700 rounded text-xs"
-                  >
-                    X
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <>
-                <div className="text-3xl mb-1">🪑</div>
-                <div className="font-bold text-lg">Table {table.number}</div>
-                <div className="text-xs mt-1 capitalize">{table.status}</div>
-                <div className="text-xs text-gray-500">{table.capacity} pers.</div>
-                {(user.role === "owner" || user.role === "manager") && (
-                  <div className="flex gap-1 mt-2 justify-center">
-                    <button
-                      onClick={() => {
-                        setEditId(table._id);
-                        setEditNumber(table.number);
-                        setEditCapacity(table.capacity);
-                      }}
-                      className="px-2 py-1 bg-gray-100 rounded text-xs hover:bg-gray-200"
-                    >
-                      ✏️
-                    </button>
-                    <button
-                      onClick={() => handleQR(table._id)}
-                      className="px-2 py-1 bg-gray-100 rounded text-xs hover:bg-gray-200"
-                    >
-                      📱
-                    </button>
-                    <button
-                      onClick={() => {
-                        if (confirm("Supprimer cette table ?"))
-                          deleteMutation.mutate(table._id);
-                      }}
-                      className="px-2 py-1 bg-red-50 text-red-600 rounded text-xs hover:bg-red-100"
-                    >
-                      🗑️
-                    </button>
+        {/* Tables grid */}
+        {tables.length === 0 ? (
+          <div className="mt-10">
+            <EmptyState
+              icon="🪑"
+              title="Aucune table"
+              subtitle="Ajoute ta première table pour générer son QR code"
+            />
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
+            {tables.map((table) => (
+              <article
+                key={table._id}
+                className={`relative bg-white rounded-2xl border p-5 overflow-hidden transition-shadow ${
+                  editId === table._id
+                    ? "border-emerald-900/50 shadow-lg shadow-emerald-900/5"
+                    : "border-stone-200 hover:shadow-md hover:shadow-stone-900/5"
+                }`}
+              >
+                {/* Status accent */}
+                <span
+                  className={`absolute inset-x-0 top-0 h-0.5 ${statusDot[table.status]}`}
+                />
+
+                {editId === table._id ? (
+                  <div className="pt-2">
+                    <div className="flex items-center gap-2">
+                      <div>
+                        <label className="block text-[10px] uppercase tracking-[0.16em] text-stone-400 font-semibold mb-1">
+                          N°
+                        </label>
+                        <input
+                          type="number"
+                          value={editNumber}
+                          onChange={(e) => setEditNumber(e.target.value)}
+                          className={`${inputClass} w-16 text-center`}
+                          autoFocus
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] uppercase tracking-[0.16em] text-stone-400 font-semibold mb-1">
+                          Places
+                        </label>
+                        <input
+                          type="number"
+                          value={editCapacity}
+                          onChange={(e) => setEditCapacity(e.target.value)}
+                          className={`${inputClass} w-16 text-center`}
+                        />
+                      </div>
+                    </div>
+                    <div className="flex gap-2 mt-4">
+                      <button
+                        onClick={() =>
+                          updateMutation.mutate({
+                            id: table._id,
+                            number: parseInt(editNumber),
+                            capacity: parseInt(editCapacity),
+                          })
+                        }
+                        className="flex-1 px-3 py-2 rounded-full bg-emerald-900 hover:bg-emerald-800 text-white text-xs font-semibold transition-colors"
+                      >
+                        Enregistrer
+                      </button>
+                      <button
+                        onClick={() => setEditId(null)}
+                        className="px-3 py-2 rounded-full border border-stone-200 text-stone-500 text-xs font-medium hover:border-stone-400 hover:text-stone-700 transition-colors"
+                      >
+                        Annuler
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="pt-1">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <p className="text-[10px] uppercase tracking-[0.18em] text-stone-400 font-semibold">
+                          Table
+                        </p>
+                        <h3 className="font-display text-3xl font-semibold text-stone-900 mt-1 tabular-nums">
+                          {table.number}
+                        </h3>
+                      </div>
+                      <span
+                        className={`px-2.5 py-1 rounded-full border text-[11px] font-semibold ${statusChip[table.status]}`}
+                      >
+                        {statusLabels[table.status]}
+                      </span>
+                    </div>
+
+                    <p className="text-[13px] text-stone-500 mt-1.5">
+                      {table.capacity} personne{table.capacity > 1 ? "s" : ""}
+                    </p>
+
+                    {canManage(user.role) && (
+                      <div className="mt-5 pt-4 border-t border-stone-100">
+                        <div className="rounded-full bg-stone-100 p-1 flex gap-0.5">
+                          {STATUS.map((s) => (
+                            <button
+                              key={s}
+                              onClick={() =>
+                                updateMutation.mutate({
+                                  id: table._id,
+                                  status: s,
+                                })
+                              }
+                              className={`flex-1 px-2 py-1.5 rounded-full text-xs font-medium transition-all ${
+                                table.status === s
+                                  ? "bg-white text-stone-900 shadow-sm"
+                                  : "text-stone-400 hover:text-stone-600"
+                              }`}
+                            >
+                              {statusLabels[s]}
+                            </button>
+                          ))}
+                        </div>
+                        <div className="flex items-center gap-2 mt-3">
+                          <button
+                            onClick={() => handleQR(table._id)}
+                            className="px-3 py-1.5 rounded-full border border-stone-200 text-stone-600 text-xs font-medium hover:border-emerald-900 hover:text-emerald-900 transition-colors"
+                          >
+                            QR
+                          </button>
+                          {user.role === "owner" ||
+                          user.role === "manager" ? (
+                            <>
+                              <button
+                                onClick={() => {
+                                  setEditId(table._id);
+                                  setEditNumber(table.number);
+                                  setEditCapacity(table.capacity);
+                                }}
+                                className="px-3 py-1.5 rounded-full border border-stone-200 text-stone-600 text-xs font-medium hover:border-stone-500 hover:text-stone-900 transition-colors"
+                              >
+                                Modifier
+                              </button>
+                              <button
+                                onClick={() => {
+                                  if (confirm("Supprimer cette table ?"))
+                                    deleteMutation.mutate(table._id);
+                                }}
+                                className="ml-auto px-3 py-1.5 rounded-full border border-rose-200 text-rose-600 text-xs font-medium hover:border-rose-400 hover:text-rose-700 transition-colors"
+                              >
+                                Supprimer
+                              </button>
+                            </>
+                          ) : null}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
-                {(user.role === "owner" ||
-                  user.role === "manager" ||
-                  user.role === "server") && (
-                  <div className="flex justify-center gap-1 mt-2">
-                    {["free", "occupied", "reserved"].map((s) => (
-                      <button
-                        key={s}
-                        onClick={() =>
-                          updateMutation.mutate({ id: table._id, status: s })
-                        }
-                        className={`px-2 py-1 rounded text-xs font-medium capitalize transition-colors ${
-                          table.status === s
-                            ? "bg-emerald-600 text-white"
-                            : "bg-gray-50 text-gray-500 hover:bg-gray-100"
-                        }`}
+              </article>
+            ))}
+          </div>
+        )}
+
+        {/* QR Modal */}
+        {showQR && (
+          <div
+            className="fixed inset-0 bg-stone-900/40 backdrop-blur-sm flex items-center justify-center z-20"
+            onClick={() => setShowQR(null)}
+          >
+            <div
+              className="bg-white rounded-3xl p-8 max-w-sm mx-4 w-full text-center"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <p className="text-[10px] uppercase tracking-[0.22em] text-emerald-800 font-semibold">
+                Table {showQR.tableNumber}
+              </p>
+              <h3 className="font-display text-2xl font-semibold text-stone-900 mt-1 mb-5">
+                QR code
+              </h3>
+              <div className="inline-block p-3 rounded-2xl border border-stone-200 bg-white">
+                <img
+                  src={showQR.qr}
+                  alt="QR Code"
+                  className="w-44 h-44 mx-auto"
+                />
+              </div>
+              <p className="text-[11px] text-stone-400 break-all mt-5 leading-relaxed">
+                {showQR.url}
+              </p>
+              <a
+                href={showQR.qr}
+                download={`table-${showQR.tableNumber}.png`}
+                className="block w-full text-center px-5 py-3 bg-emerald-900 hover:bg-emerald-800 text-white rounded-full text-sm font-semibold transition-colors mt-5"
+              >
+                Télécharger le QR
+              </a>
+              <button
+                onClick={() => setShowQR(null)}
+                className="w-full mt-2 px-5 py-3 border border-stone-200 text-stone-600 rounded-full text-sm font-medium hover:border-stone-400 hover:text-stone-900 transition-colors"
+              >
+                Fermer
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Print sheet */}
+        {showPrint && (
+          <>
+            <style>{`
+              @media print {
+                body * { visibility: hidden; }
+                #print-sheet, #print-sheet * { visibility: visible; }
+                #print-sheet { position: absolute; inset: 0; }
+              }
+            `}</style>
+            <div
+              id="print-sheet"
+              className="fixed inset-0 z-30 bg-stone-100 overflow-auto p-6"
+            >
+              <div className="max-w-4xl mx-auto">
+                <div className="flex items-center justify-between mb-6 print:hidden">
+                  <div>
+                    <p className="text-[10px] uppercase tracking-[0.22em] text-emerald-800 font-semibold">
+                      Salle
+                    </p>
+                    <h2 className="font-display text-2xl font-semibold text-stone-900 mt-1">
+                      QR codes des tables
+                    </h2>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => window.print()}
+                      className="px-5 py-2.5 bg-emerald-900 hover:bg-emerald-800 text-white rounded-full text-sm font-semibold"
+                    >
+                      Imprimer
+                    </button>
+                    <button
+                      onClick={() => setShowPrint(false)}
+                      className="px-5 py-2.5 bg-white border border-stone-200 text-stone-600 rounded-full text-sm font-medium hover:border-stone-400"
+                    >
+                      Fermer
+                    </button>
+                  </div>
+                </div>
+                {printLoading ? (
+                  <div className="animate-pulse bg-white rounded-2xl h-48" />
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                    {printData?.tables?.map((t) => (
+                      <div
+                        key={t._id}
+                        className="bg-white rounded-2xl border border-dashed border-stone-300 p-5 text-center break-inside-avoid"
                       >
-                        {statusLabels[s]}
-                      </button>
+                        <img
+                          src={t.qr}
+                          alt={`Table ${t.number}`}
+                          className="w-32 h-32 mx-auto"
+                        />
+                        <p className="mt-3 font-display text-lg font-semibold text-stone-900">
+                          Table {t.number}
+                        </p>
+                        <p className="text-xs text-stone-400">
+                          {t.capacity} pers.
+                        </p>
+                      </div>
                     ))}
                   </div>
                 )}
-              </>
-            )}
-          </div>
-        ))}
-      </div>
-      )}
-
-      {/* QR Modal */}
-      {showQR && (
-        <div
-          className="fixed inset-0 bg-black/50 flex items-center justify-center z-20"
-          onClick={() => setShowQR(null)}
-        >
-          <div
-            className="bg-white rounded-xl p-6 max-w-sm mx-4"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 className="font-bold text-gray-800 mb-2">
-              Table {showQR.tableNumber} — QR Code
-            </h3>
-            <img
-              src={showQR.qr}
-              alt="QR Code"
-              className="w-48 h-48 mx-auto mb-3"
-            />
-            <p className="text-xs text-gray-500 break-all mb-3">{showQR.url}</p>
-            <a
-              href={showQR.qr}
-              download={`table-${showQR.tableNumber}.png`}
-              className="block w-full text-center px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm"
-            >
-              Télécharger
-            </a>
-            <button
-              onClick={() => setShowQR(null)}
-              className="w-full mt-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm"
-            >
-              Fermer
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Print sheet */}
-      {showPrint && (
-        <>
-          <style>{`
-            @media print {
-              body * { visibility: hidden; }
-              #print-sheet, #print-sheet * { visibility: visible; }
-              #print-sheet { position: absolute; inset: 0; }
-            }
-          `}</style>
-          <div
-            id="print-sheet"
-            className="fixed inset-0 z-30 bg-gray-100 overflow-auto p-6"
-          >
-            <div className="max-w-4xl mx-auto">
-              <div className="flex items-center justify-between mb-6 print:hidden">
-                <h2 className="text-xl font-bold text-gray-800">
-                  QR codes des tables
-                </h2>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => window.print()}
-                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-medium"
-                  >
-                    🖨️ Imprimer
-                  </button>
-                  <button
-                    onClick={() => setShowPrint(false)}
-                    className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg text-sm"
-                  >
-                    Fermer
-                  </button>
-                </div>
               </div>
-              {printLoading ? (
-                <div className="animate-pulse bg-gray-200 rounded-xl h-40" />
-              ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                  {printData?.tables?.map((t) => (
-                    <div
-                      key={t._id}
-                      className="bg-white rounded-xl border border-gray-200 p-4 text-center break-inside-avoid"
-                    >
-                      <img
-                        src={t.qr}
-                        alt={`Table ${t.number}`}
-                        className="w-32 h-32 mx-auto"
-                      />
-                      <p className="mt-2 font-semibold text-gray-800">
-                        Table {t.number}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        {t.capacity} pers.
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
-          </div>
-        </>
-      )}
+          </>
+        )}
+      </div>
     </div>
   );
 }
