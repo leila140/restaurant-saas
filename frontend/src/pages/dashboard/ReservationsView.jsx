@@ -45,13 +45,6 @@ export default function ReservationsView() {
     enabled: !!restaurantId,
   });
 
-  const { data: tables = [] } = useQuery({
-    queryKey: ["tables", restaurantId],
-    queryFn: () =>
-      api.get("/tables", { params: { restaurantId } }).then((r) => r.data),
-    enabled: !!restaurantId,
-  });
-
   const errMsg = (err) => {
     const msg = err?.response?.data?.error;
     return msg || "Erreur lors de la mise à jour";
@@ -77,13 +70,6 @@ export default function ReservationsView() {
     onError: () => toast.error("Erreur lors de la suppression"),
   });
 
-  const handleAssignTable = (reservationId, tableId) => {
-    updateMutation.mutate({
-      id: reservationId,
-      data: { tableId, status: "confirmed" },
-    });
-  };
-
   const handleConfirm = (reservationId) => {
     updateMutation.mutate({ id: reservationId, data: { status: "confirmed" } });
   };
@@ -91,8 +77,6 @@ export default function ReservationsView() {
   const handleStatus = (reservationId, status) => {
     updateMutation.mutate({ id: reservationId, data: { status } });
   };
-
-  const freeTables = tables.filter((t) => t.status === "free");
 
   const counts = {
     all: reservations.length,
@@ -201,21 +185,7 @@ export default function ReservationsView() {
                       >
                         ✓ Confirmer
                       </button>
-                      <select
-                        onChange={(e) => {
-                          if (e.target.value)
-                            handleAssignTable(res._id, e.target.value);
-                        }}
-                        value=""
-                        className="px-2 py-1 border rounded text-xs"
-                      >
-                        <option value="">Assigner table</option>
-                        {freeTables.map((t) => (
-                          <option key={t._id} value={t._id}>
-                            Table {t.number} ({t.capacity}p)
-                          </option>
-                        ))}
-                      </select>
+                      <AssignTableSelect reservation={res} />
                       <button
                         onClick={() => handleStatus(res._id, "cancelled")}
                         className="px-2 py-1 bg-red-50 text-red-600 rounded text-xs hover:bg-red-100"
@@ -250,5 +220,74 @@ export default function ReservationsView() {
         </div>
       )}
     </div>
+  );
+}
+
+function AssignTableSelect({ reservation }) {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const restaurantId = user?.restaurantId;
+
+  const { data: availability } = useQuery({
+    queryKey: [
+      "tables-availability",
+      restaurantId,
+      reservation.date,
+      reservation.time,
+    ],
+    queryFn: () =>
+      api
+        .get("/tables/availability", {
+          params: {
+            date: new Date(reservation.date).toISOString(),
+            time: reservation.time,
+          },
+        })
+        .then((r) => r.data),
+    enabled: !!restaurantId && !!reservation.date && !!reservation.time,
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }) => api.put(`/reservations/${id}`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries(["reservations", restaurantId]);
+      queryClient.invalidateQueries(["tables", restaurantId]);
+      queryClient.invalidateQueries(["tables-availability", restaurantId]);
+      toast.success("Réservation mise à jour");
+    },
+    onError: (err) => {
+      const msg = err?.response?.data?.error;
+      toast.error(msg || "Erreur lors de la mise à jour");
+    },
+  });
+
+  const handleAssign = (tableId) => {
+    if (!tableId) return;
+    updateMutation.mutate({
+      id: reservation._id,
+      data: { tableId, status: "confirmed" },
+    });
+  };
+
+  const availableTables = availability?.tables || [];
+
+  return (
+    <select
+      onChange={(e) => handleAssign(e.target.value)}
+      value=""
+      disabled={availableTables.length === 0}
+      className="px-2 py-1 border rounded text-xs"
+    >
+      <option value="">
+        {availableTables.length === 0
+          ? "Aucune table libre"
+          : "Assigner table"}
+      </option>
+      {availableTables.map((t) => (
+        <option key={t._id} value={t._id}>
+          Table {t.number} ({t.capacity}p)
+        </option>
+      ))}
+    </select>
   );
 }

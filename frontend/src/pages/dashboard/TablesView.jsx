@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import api from "../../services/api";
+import useSocket from "../../hooks/useSocket";
 import { useAuth } from "../../context/AuthContext";
 import EmptyState from "../../components/EmptyState";
 import { SkeletonGrid } from "../../components/Skeleton";
@@ -12,15 +13,24 @@ const statusColors = {
   reserved: "bg-yellow-100 border-yellow-300 text-yellow-700",
 };
 
+const statusLabels = {
+  free: "Libre",
+  occupied: "Occupée",
+  reserved: "Réservée",
+};
+
 export default function TablesView() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const restaurantId = user?.restaurantId;
+  const { on, off } = useSocket(restaurantId);
   const [showQR, setShowQR] = useState(null);
+  const [showPrint, setShowPrint] = useState(false);
   const [newNumber, setNewNumber] = useState("");
   const [newCapacity, setNewCapacity] = useState(4);
   const [editId, setEditId] = useState(null);
   const [editNumber, setEditNumber] = useState("");
+  const [editCapacity, setEditCapacity] = useState(4);
 
   const { data: tables = [], isLoading } = useQuery({
     queryKey: ["tables", restaurantId],
@@ -28,6 +38,20 @@ export default function TablesView() {
     enabled: !!restaurantId,
     refetchInterval: 10000,
   });
+
+  useEffect(() => {
+    if (!on || !off) return;
+
+    const handleTableChanged = () => {
+      queryClient.invalidateQueries(["tables", restaurantId]);
+    };
+
+    on("table:statusChanged", handleTableChanged);
+
+    return () => {
+      off("table:statusChanged", handleTableChanged);
+    };
+  }, [on, off, restaurantId, queryClient]);
 
   const createMutation = useMutation({
     mutationFn: (data) => api.post("/tables", data),
@@ -63,6 +87,12 @@ export default function TablesView() {
     mutationFn: (id) => api.get(`/tables/${id}/qr`),
   });
 
+  const { data: printData, isLoading: printLoading } = useQuery({
+    queryKey: ["tables", restaurantId, "print"],
+    queryFn: () => api.get("/tables/qr/print").then((r) => r.data),
+    enabled: showPrint,
+  });
+
   const handleCreate = (e) => {
     e.preventDefault();
     if (!newNumber) return;
@@ -90,6 +120,13 @@ export default function TablesView() {
     <div className="p-4 sm:p-6">
       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-6">
         <h1 className="text-2xl font-bold text-gray-800">Tables</h1>
+        <button
+          onClick={() => setShowPrint(true)}
+          disabled={tables.length === 0}
+          className="px-3 py-1.5 bg-gray-800 hover:bg-gray-900 text-white rounded-lg text-sm disabled:opacity-40 transition-colors"
+        >
+          🖨️ Tout imprimer
+        </button>
         {(user.role === "owner" || user.role === "manager") && (
           <form onSubmit={handleCreate} className="flex flex-wrap gap-2 items-center">
             <input
@@ -134,19 +171,29 @@ export default function TablesView() {
           >
             {editId === table._id ? (
               <div className="space-y-2">
-                <input
-                  type="number"
-                  value={editNumber}
-                  onChange={(e) => setEditNumber(e.target.value)}
-                  className="w-full px-2 py-1 border rounded text-sm text-center"
-                  autoFocus
-                />
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    value={editNumber}
+                    onChange={(e) => setEditNumber(e.target.value)}
+                    className="w-14 px-2 py-1 border rounded text-sm text-center"
+                    autoFocus
+                  />
+                  <input
+                    type="number"
+                    value={editCapacity}
+                    onChange={(e) => setEditCapacity(e.target.value)}
+                    className="w-14 px-2 py-1 border rounded text-sm text-center"
+                    title="Capacité"
+                  />
+                </div>
                 <div className="flex gap-1">
                   <button
                     onClick={() =>
                       updateMutation.mutate({
                         id: table._id,
                         number: parseInt(editNumber),
+                        capacity: parseInt(editCapacity),
                       })
                     }
                     className="flex-1 px-2 py-1 bg-green-600 text-white rounded text-xs"
@@ -173,6 +220,7 @@ export default function TablesView() {
                       onClick={() => {
                         setEditId(table._id);
                         setEditNumber(table.number);
+                        setEditCapacity(table.capacity);
                       }}
                       className="px-2 py-1 bg-gray-100 rounded text-xs hover:bg-gray-200"
                     >
@@ -193,6 +241,27 @@ export default function TablesView() {
                     >
                       🗑️
                     </button>
+                  </div>
+                )}
+                {(user.role === "owner" ||
+                  user.role === "manager" ||
+                  user.role === "server") && (
+                  <div className="flex justify-center gap-1 mt-2">
+                    {["free", "occupied", "reserved"].map((s) => (
+                      <button
+                        key={s}
+                        onClick={() =>
+                          updateMutation.mutate({ id: table._id, status: s })
+                        }
+                        className={`px-2 py-1 rounded text-xs font-medium capitalize transition-colors ${
+                          table.status === s
+                            ? "bg-emerald-600 text-white"
+                            : "bg-gray-50 text-gray-500 hover:bg-gray-100"
+                        }`}
+                      >
+                        {statusLabels[s]}
+                      </button>
+                    ))}
                   </div>
                 )}
               </>
@@ -236,6 +305,69 @@ export default function TablesView() {
             </button>
           </div>
         </div>
+      )}
+
+      {/* Print sheet */}
+      {showPrint && (
+        <>
+          <style>{`
+            @media print {
+              body * { visibility: hidden; }
+              #print-sheet, #print-sheet * { visibility: visible; }
+              #print-sheet { position: absolute; inset: 0; }
+            }
+          `}</style>
+          <div
+            id="print-sheet"
+            className="fixed inset-0 z-30 bg-gray-100 overflow-auto p-6"
+          >
+            <div className="max-w-4xl mx-auto">
+              <div className="flex items-center justify-between mb-6 print:hidden">
+                <h2 className="text-xl font-bold text-gray-800">
+                  QR codes des tables
+                </h2>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => window.print()}
+                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-medium"
+                  >
+                    🖨️ Imprimer
+                  </button>
+                  <button
+                    onClick={() => setShowPrint(false)}
+                    className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg text-sm"
+                  >
+                    Fermer
+                  </button>
+                </div>
+              </div>
+              {printLoading ? (
+                <div className="animate-pulse bg-gray-200 rounded-xl h-40" />
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                  {printData?.tables?.map((t) => (
+                    <div
+                      key={t._id}
+                      className="bg-white rounded-xl border border-gray-200 p-4 text-center break-inside-avoid"
+                    >
+                      <img
+                        src={t.qr}
+                        alt={`Table ${t.number}`}
+                        className="w-32 h-32 mx-auto"
+                      />
+                      <p className="mt-2 font-semibold text-gray-800">
+                        Table {t.number}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {t.capacity} pers.
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </>
       )}
     </div>
   );
