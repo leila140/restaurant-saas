@@ -7,6 +7,8 @@ import { useAuth } from "../../context/AuthContext";
 import { playNewOrderSound } from "../../utils/sound";
 import EmptyState from "../../components/EmptyState";
 import { SkeletonCard } from "../../components/Skeleton";
+import CheckoutModal from "../../components/CheckoutModal";
+import ReceiptModal from "../../components/ReceiptModal";
 
 const statusColors = {
   pending: "bg-yellow-100 border-yellow-300 text-yellow-800",
@@ -66,6 +68,9 @@ export default function OrdersView() {
   const [soundEnabled, setSoundEnabled] = useState(
     () => localStorage.getItem("kitchenSoundEnabled") !== "0"
   );
+  const [checkoutBill, setCheckoutBill] = useState(null);
+  const [receiptNumber, setReceiptNumber] = useState(null);
+  const [showReceipts, setShowReceipts] = useState(false);
 
   useEffect(() => {
     localStorage.setItem("kitchenSoundEnabled", soundEnabled ? "1" : "0");
@@ -106,14 +111,24 @@ export default function OrdersView() {
   });
 
   const checkoutMutation = useMutation({
-    mutationFn: (tableId) => api.post("/orders/checkout", { tableId }),
-    onSuccess: () => {
+    mutationFn: ({ tableId, ...payment }) =>
+      api.post("/orders/checkout", { tableId, ...payment }),
+    onSuccess: (response) => {
       queryClient.invalidateQueries(["orders", restaurantId]);
       queryClient.invalidateQueries(["tables", restaurantId]);
       queryClient.invalidateQueries(["orders", restaurantId, "bills"]);
+      queryClient.invalidateQueries(["orders", restaurantId, "receipts"]);
+      setCheckoutBill(null);
+      setReceiptNumber(response.data.receipt?.receiptNumber || null);
       toast.success("Addition encaissée, table libérée");
     },
     onError: () => toast.error("Erreur lors de l'encaissement"),
+  });
+
+  const { data: receipts = [] } = useQuery({
+    queryKey: ["orders", restaurantId, "receipts"],
+    queryFn: () => api.get("/orders/receipts").then((r) => r.data),
+    enabled: !!restaurantId && isServerLike && showReceipts,
   });
 
   useEffect(() => {
@@ -304,6 +319,16 @@ export default function OrdersView() {
         >
           🔔 {soundEnabled ? "Son activé" : "Son coupé"}
         </button>
+        <button
+          onClick={() => setShowReceipts((prev) => !prev)}
+          className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+            showReceipts
+              ? "bg-emerald-600 text-white"
+              : "bg-white text-gray-600 hover:bg-gray-50"
+          }`}
+        >
+          🖨️ Reçus
+        </button>
         <div className="flex gap-2 text-sm flex-wrap">
           {allowedStatuses ? (
             allowedStatuses.map((s) => (
@@ -384,22 +409,56 @@ export default function OrdersView() {
                     )}
                   </div>
                   <button
-                    onClick={() => {
-                      if (
-                        confirm(
-                          `Encaisser l'addition de la table ${bill.tableNumber} (${bill.total.toFixed(2)} €) ?`
-                        )
-                      )
-                        checkoutMutation.mutate(bill.tableId);
-                    }}
-                    disabled={checkoutMutation.isPending}
-                    className="w-full px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm rounded-lg font-medium transition-colors disabled:opacity-50"
+                    onClick={() => setCheckoutBill(bill)}
+                    className="w-full px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm rounded-lg font-medium transition-colors"
                   >
                     Encaisser — {bill.total.toFixed(2)} €
                   </button>
                 </div>
               ))}
             </div>
+          </div>
+        )}
+
+        {showReceipts && (
+          <div>
+            <h2 className="text-lg font-semibold text-gray-700 mb-3">
+              🖨️ Derniers tickets
+            </h2>
+            {receipts.length === 0 ? (
+              <EmptyState
+                icon="🧾"
+                title="Aucun ticket pour le moment"
+                subtitle="Les tickets apparaissent après chaque encaissement"
+              />
+            ) : (
+              <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100">
+                {receipts.map((r) => (
+                  <button
+                    key={r.receiptNumber}
+                    onClick={() => setReceiptNumber(r.receiptNumber)}
+                    className="w-full flex items-center justify-between px-4 py-3 text-sm hover:bg-gray-50 transition-colors"
+                  >
+                    <span className="text-gray-700">
+                      Ticket{" "}
+                      <span className="font-semibold">
+                        #{String(r.receiptNumber).padStart(4, "0")}
+                      </span>
+                      <span className="text-gray-400 ml-2">
+                        Table {r.tableNumber} ·{" "}
+                        {new Date(r.paidAt).toLocaleString("fr-FR", {
+                          dateStyle: "short",
+                          timeStyle: "short",
+                        })}
+                      </span>
+                    </span>
+                    <span className="font-semibold text-emerald-700 tabular-nums">
+                      {r.total.toFixed(2)} €
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
@@ -444,6 +503,27 @@ export default function OrdersView() {
           />
         )}
       </div>
+
+      {checkoutBill && (
+        <CheckoutModal
+          bill={checkoutBill}
+          isPending={checkoutMutation.isPending}
+          onConfirm={(payload) =>
+            checkoutMutation.mutate({
+              tableId: checkoutBill.tableId,
+              ...payload,
+            })
+          }
+          onClose={() => setCheckoutBill(null)}
+        />
+      )}
+
+      {receiptNumber && (
+        <ReceiptModal
+          receiptNumber={receiptNumber}
+          onClose={() => setReceiptNumber(null)}
+        />
+      )}
     </div>
   );
 }
