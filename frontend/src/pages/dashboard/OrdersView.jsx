@@ -605,9 +605,11 @@ export default function OrdersView() {
                   })
                 }
                 disabled={exportMutation.isPending}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold bg-gray-900 text-white hover:bg-gray-800 disabled:opacity-50 shadow-sm transition-colors"
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 shadow-sm shadow-emerald-600/20 ring-1 ring-emerald-600/10 transition-all"
               >
-                <span className="text-sm leading-none">⬇️</span>
+                <span className="w-5 h-5 rounded-md bg-white/20 flex items-center justify-center text-xs leading-none">
+                  ⬇️
+                </span>
                 {exportMutation.isPending ? "Export..." : "Exporter"}
               </button>
             </div>
