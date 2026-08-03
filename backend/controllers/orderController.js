@@ -212,6 +212,56 @@ exports.getOrders = async (req, res) => {
   }
 };
 
+// Staff: orders for a date range (used for CSV export)
+exports.exportOrders = async (req, res) => {
+  try {
+    const { from, to } = req.query;
+
+    const fromDate = from ? new Date(from) : new Date(Date.now() - 30 * 864e5);
+    const toDate = to ? new Date(to) : new Date();
+
+    if (isNaN(fromDate.getTime()) || isNaN(toDate.getTime())) {
+      return res.status(400).json({ error: "Invalid date range" });
+    }
+
+    toDate.setHours(23, 59, 59, 999);
+
+    const orders = await Order.find({
+      restaurantId: req.restaurantId,
+      createdAt: { $gte: fromDate, $lte: toDate },
+    })
+      .populate("tableId", "number")
+      .sort({ createdAt: 1 });
+
+    const rows = orders.map((order) => {
+      const subtotal = order.totalPrice;
+      const discountAmount = subtotal * ((order.discountPercent || 0) / 100);
+      const totalPaid = subtotal - discountAmount + (order.tip || 0);
+      return {
+        id: order._id,
+        createdAt: order.createdAt,
+        tableNumber: order.tableId ? order.tableId.number : "",
+        status: order.status,
+        items: order.items
+          .map((item) => `${item.quantity}x ${item.name}`)
+          .join(" / "),
+        itemCount: order.items.reduce((sum, item) => sum + item.quantity, 0),
+        subtotal,
+        discountPercent: order.discountPercent || 0,
+        discountAmount: Math.round(discountAmount * 100) / 100,
+        tip: order.tip || 0,
+        totalPaid: Math.round(totalPaid * 100) / 100,
+        paymentMethod: order.paymentMethod || "",
+        receiptNumber: order.receiptNumber || "",
+      };
+    });
+
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
 // Staff: open bills grouped by table
 exports.getOpenBills = async (req, res) => {
   try {

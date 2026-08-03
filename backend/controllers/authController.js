@@ -2,6 +2,12 @@ const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const User = require("../models/User");
 const Restaurant = require("../models/Restaurant");
+const MenuCategory = require("../models/MenuCategory");
+const MenuItem = require("../models/MenuItem");
+const Table = require("../models/Table");
+const Reservation = require("../models/Reservation");
+const Order = require("../models/Order");
+const Review = require("../models/Review");
 
 const generateTokens = (user) => {
   const accessToken = jwt.sign(
@@ -163,6 +169,108 @@ exports.me = async (req, res) => {
       restaurantSlug: user.restaurantId.slug,
     });
   } catch (err) {
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+// ─── Account management ──────────────────────────────────────────
+
+exports.updateProfile = async (req, res) => {
+  try {
+    const { name, email } = req.body;
+
+    if (!name && !email) {
+      return res.status(400).json({ error: "Nothing to update" });
+    }
+
+    const update = {};
+    if (name) update.name = name.trim();
+    if (email) update.email = email.trim();
+
+    if (update.email) {
+      const existing = await User.findOne({
+        email: update.email,
+        _id: { $ne: req.user.id },
+      });
+      if (existing) {
+        return res.status(409).json({ error: "Email already in use" });
+      }
+    }
+
+    const user = await User.findByIdAndUpdate(req.user.id, update, {
+      new: true,
+    }).select("-passwordHash");
+
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    res.json({
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+    });
+  } catch (err) {
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+exports.changePassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res
+        .status(400)
+        .json({ error: "Current and new password are required" });
+    }
+
+    if (newPassword.length < 8) {
+      return res
+        .status(400)
+        .json({ error: "New password must be at least 8 characters" });
+    }
+
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    const valid = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!valid) {
+      return res.status(401).json({ error: "Current password is incorrect" });
+    }
+
+    if (await bcrypt.compare(newPassword, user.passwordHash)) {
+      return res
+        .status(400)
+        .json({ error: "New password must be different from the current one" });
+    }
+
+    user.passwordHash = await bcrypt.hash(newPassword, 12);
+    await user.save();
+
+    res.json({ message: "Password updated" });
+  } catch (err) {
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+exports.deleteAccount = async (req, res) => {
+  try {
+    const restaurantId = req.restaurantId;
+
+    await Promise.all([
+      User.deleteMany({ restaurantId }),
+      MenuCategory.deleteMany({ restaurantId }),
+      MenuItem.deleteMany({ restaurantId }),
+      Table.deleteMany({ restaurantId }),
+      Reservation.deleteMany({ restaurantId }),
+      Order.deleteMany({ restaurantId }),
+      Review.deleteMany({ restaurantId }),
+      Restaurant.findByIdAndDelete(restaurantId),
+    ]);
+
+    res.json({ message: "Restaurant account deleted" });
+  } catch (err) {
+    console.error("Delete account error:", err);
     res.status(500).json({ error: "Internal server error" });
   }
 };

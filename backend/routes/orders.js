@@ -40,6 +40,13 @@ router.get(
   roleCheck(["owner", "manager", "server"]),
   orderController.getReceipt
 );
+router.get(
+  "/export",
+  auth,
+  tenant,
+  roleCheck(["owner", "manager", "server"]),
+  orderController.exportOrders
+);
 router.get("/:id", auth, tenant, orderController.getOrder);
 router.patch("/:id/status", auth, tenant, orderController.updateStatus);
 
