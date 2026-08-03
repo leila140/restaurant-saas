@@ -25,6 +25,13 @@ const statusLabel = {
   cancelled: "Annulée",
 };
 
+const toLocalInput = (d) => {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+};
+
 export default function ReservationsView() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -33,6 +40,8 @@ export default function ReservationsView() {
     new Date().toISOString().split("T")[0]
   );
   const [statusFilter, setStatusFilter] = useState("all");
+  const [showSheet, setShowSheet] = useState(false);
+  const todayStr = toLocalInput(new Date());
 
   const { data: reservations = [], isLoading } = useQuery({
     queryKey: ["reservations", restaurantId, dateFilter],
@@ -85,6 +94,27 @@ export default function ReservationsView() {
     cancelled: reservations.filter((r) => r.status === "cancelled").length,
   };
 
+  const { data: sheet = [] } = useQuery({
+    queryKey: ["reservations", restaurantId, "sheet", todayStr],
+    queryFn: () =>
+      api
+        .get("/reservations", {
+          params: { restaurantId, date: todayStr },
+        })
+        .then((r) => r.data),
+    enabled: !!restaurantId && showSheet,
+  });
+
+  const { data: restaurantInfo } = useQuery({
+    queryKey: ["restaurant", "me"],
+    queryFn: () => api.get("/restaurants/me").then((r) => r.data),
+    enabled: showSheet,
+  });
+
+  const sortedSheet = [...sheet].sort((a, b) =>
+    a.time.localeCompare(b.time)
+  );
+
   const filtered =
     statusFilter === "all"
       ? reservations
@@ -115,6 +145,12 @@ export default function ReservationsView() {
           onChange={(e) => setDateFilter(e.target.value)}
           className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm"
         />
+        <button
+          onClick={() => setShowSheet(true)}
+          className="px-3 py-1.5 rounded-full text-sm font-medium bg-white text-gray-600 hover:bg-gray-50 border border-gray-200 transition-colors"
+        >
+          🖨️ Feuille du jour
+        </button>
       </div>
 
       {/* Status tabs */}
@@ -217,6 +253,103 @@ export default function ReservationsView() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {showSheet && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <style>{`
+            @media print {
+              body * { visibility: hidden; }
+              #daily-sheet, #daily-sheet * { visibility: visible; }
+              #daily-sheet { position: absolute; left: 0; top: 0; width: 100%; box-shadow: none !important; }
+            }
+          `}</style>
+          <div className="w-full max-w-2xl bg-white rounded-2xl shadow-xl">
+            <div className="p-4 border-b flex items-center justify-between">
+              <h2 className="font-semibold text-gray-800">Feuille du jour</h2>
+              <button
+                onClick={() => setShowSheet(false)}
+                className="text-gray-400 text-xl leading-none hover:text-gray-600"
+              >
+                ×
+              </button>
+            </div>
+
+            <div
+              id="daily-sheet"
+              className="p-5 bg-white text-gray-800 text-sm"
+            >
+              <div className="text-center mb-4">
+                <p className="text-lg font-bold">
+                  {restaurantInfo?.name || "Restaurant"}
+                </p>
+                <p className="text-gray-500">
+                  Réservations du{" "}
+                  {new Date(todayStr + "T00:00:00").toLocaleDateString("fr-FR", {
+                    weekday: "long",
+                    day: "numeric",
+                    month: "long",
+                    year: "numeric",
+                  })}
+                </p>
+              </div>
+
+              {sortedSheet.length === 0 ? (
+                <p className="text-center text-gray-400 py-8">
+                  Aucune réservation aujourd'hui
+                </p>
+              ) : (
+                <table className="w-full text-left">
+                  <thead>
+                    <tr className="border-b-2 border-gray-300 text-gray-500 uppercase text-xs">
+                      <th className="py-2 pr-3">Heure</th>
+                      <th className="py-2 pr-3">Client</th>
+                      <th className="py-2 pr-3">Téléphone</th>
+                      <th className="py-2 pr-3 text-center">Couverts</th>
+                      <th className="py-2 pr-3">Table</th>
+                      <th className="py-2">Statut</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sortedSheet.map((res) => (
+                      <tr key={res._id} className="border-b border-gray-100">
+                        <td className="py-2 pr-3 font-semibold tabular-nums">
+                          {res.time}
+                        </td>
+                        <td className="py-2 pr-3">{res.customerName}</td>
+                        <td className="py-2 pr-3">{res.customerPhone}</td>
+                        <td className="py-2 pr-3 text-center">
+                          {res.partySize}
+                        </td>
+                        <td className="py-2 pr-3">
+                          {res.tableId
+                            ? `Table ${res.tableId.number}`
+                            : "—"}
+                        </td>
+                        <td className="py-2">{statusLabel[res.status]}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+
+            <div className="p-4 pt-0 flex gap-2">
+              <button
+                onClick={() => setShowSheet(false)}
+                className="flex-1 px-3 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50"
+              >
+                Fermer
+              </button>
+              <button
+                onClick={() => window.print()}
+                className="flex-1 px-3 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm rounded-xl font-semibold transition-colors"
+              >
+                🖨️ Imprimer
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
