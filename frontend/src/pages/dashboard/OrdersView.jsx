@@ -478,36 +478,78 @@ export default function OrdersView() {
             </div>
           </div>
 
-          <div className="flex items-center gap-1 bg-white rounded-2xl border border-gray-100 shadow-sm p-1.5 w-fit">
-            <button
-              onClick={() => setSoundEnabled((prev) => !prev)}
-              title="Son de notification nouvelle commande"
-              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-medium transition-all ${
-                soundEnabled
-                  ? "bg-emerald-600 text-white shadow-sm"
-                  : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
-              }`}
-            >
-              <span className="text-base leading-none">
-                {soundEnabled ? "🔔" : "🔕"}
-              </span>
-              <span>Son</span>
-            </button>
-            <button
-              onClick={() => setShowReceipts((prev) => !prev)}
-              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-medium transition-all ${
-                showReceipts
-                  ? "bg-emerald-600 text-white shadow-sm"
-                  : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
-              }`}
-            >
-              <span className="text-base leading-none">🖨️</span>
-              <span>Reçus</span>
-            </button>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+            {isServerLike && (
+              <div className="flex items-center gap-2.5">
+                <span className="text-xs font-medium text-gray-400">Période</span>
+                <div className="flex items-center border border-gray-200 rounded-xl overflow-hidden bg-gray-50 focus-within:bg-white focus-within:ring-2 focus-within:ring-emerald-500 focus-within:outline-none transition-all">
+                  <input
+                    type="date"
+                    value={exportRange.from}
+                    onChange={(e) =>
+                      setExportRange((prev) => ({ ...prev, from: e.target.value }))
+                    }
+                    className="px-2.5 py-2 text-sm bg-transparent focus:outline-none [color-scheme:light]"
+                  />
+                  <span className="text-gray-300 text-sm px-0.5">→</span>
+                  <input
+                    type="date"
+                    value={exportRange.to}
+                    onChange={(e) =>
+                      setExportRange((prev) => ({ ...prev, to: e.target.value }))
+                    }
+                    className="px-2.5 py-2 text-sm bg-transparent focus:outline-none [color-scheme:light]"
+                  />
+                </div>
+                <button
+                  onClick={() =>
+                    exportMutation.mutate({
+                      from: exportRange.from,
+                      to: exportRange.to,
+                    })
+                  }
+                  disabled={exportMutation.isPending}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 shadow-sm shadow-emerald-600/20 ring-1 ring-emerald-600/10 transition-all"
+                >
+                  <span className="w-5 h-5 rounded-md bg-white/20 flex items-center justify-center text-xs leading-none">
+                    ⬇️
+                  </span>
+                  {exportMutation.isPending ? "Export..." : "Exporter"}
+                </button>
+              </div>
+            )}
+
+            <div className="flex items-center gap-1 bg-white rounded-2xl border border-gray-100 shadow-sm p-1.5 w-fit">
+              <button
+                onClick={() => setSoundEnabled((prev) => !prev)}
+                title="Son de notification nouvelle commande"
+                className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-medium transition-all ${
+                  soundEnabled
+                    ? "bg-emerald-600 text-white shadow-sm"
+                    : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                }`}
+              >
+                <span className="text-base leading-none">
+                  {soundEnabled ? "🔔" : "🔕"}
+                </span>
+                <span>Son</span>
+              </button>
+              <button
+                onClick={() => setShowReceipts((prev) => !prev)}
+                className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-medium transition-all ${
+                  showReceipts
+                    ? "bg-emerald-600 text-white shadow-sm"
+                    : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                }`}
+              >
+                <span className="text-base leading-none">🖨️</span>
+                <span>Reçus</span>
+              </button>
+            </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-3 flex flex-col lg:flex-row lg:items-center gap-3">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-3 flex gap-1.5 flex-wrap">
           <div className="flex gap-1.5 flex-wrap">
             {allowedStatuses ? (
               allowedStatuses.map((s) => (
@@ -574,46 +616,6 @@ export default function OrdersView() {
               </>
             )}
           </div>
-
-          {isServerLike && (
-            <div className="lg:ml-auto flex flex-wrap items-center gap-2.5 lg:border-l lg:border-gray-100 lg:pl-4 pt-3 lg:pt-0 border-t border-gray-100">
-              <span className="text-xs font-medium text-gray-400">Période</span>
-              <div className="flex items-center border border-gray-200 rounded-xl overflow-hidden bg-gray-50 focus-within:bg-white focus-within:ring-2 focus-within:ring-emerald-500 focus-within:outline-none transition-all">
-                <input
-                  type="date"
-                  value={exportRange.from}
-                  onChange={(e) =>
-                    setExportRange((prev) => ({ ...prev, from: e.target.value }))
-                  }
-                  className="px-2.5 py-2 text-sm bg-transparent focus:outline-none [color-scheme:light]"
-                />
-                <span className="text-gray-300 text-sm px-0.5">→</span>
-                <input
-                  type="date"
-                  value={exportRange.to}
-                  onChange={(e) =>
-                    setExportRange((prev) => ({ ...prev, to: e.target.value }))
-                  }
-                  className="px-2.5 py-2 text-sm bg-transparent focus:outline-none [color-scheme:light]"
-                />
-              </div>
-              <button
-                onClick={() =>
-                  exportMutation.mutate({
-                    from: exportRange.from,
-                    to: exportRange.to,
-                  })
-                }
-                disabled={exportMutation.isPending}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 shadow-sm shadow-emerald-600/20 ring-1 ring-emerald-600/10 transition-all"
-              >
-                <span className="w-5 h-5 rounded-md bg-white/20 flex items-center justify-center text-xs leading-none">
-                  ⬇️
-                </span>
-                {exportMutation.isPending ? "Export..." : "Exporter"}
-              </button>
-            </div>
-          )}
         </div>
       </div>
 
