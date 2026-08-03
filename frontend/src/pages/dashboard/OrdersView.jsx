@@ -277,6 +277,12 @@ export default function OrdersView() {
     served: filteredOrders.filter((o) => servedOrders.includes(o.status)),
   };
 
+  const statusCounts = {};
+  (orders || []).forEach((o) => {
+    statusCounts[o.status] = (statusCounts[o.status] || 0) + 1;
+  });
+  const liveCount = (statusCounts.pending || 0) + (statusCounts.preparing || 0);
+
   const renderOrderCard = (order) => {
     const cfg = statusConfig[order.status] || statusConfig.pending;
     const isNew =
@@ -444,41 +450,59 @@ export default function OrdersView() {
   return (
     <div className="p-4 sm:p-6">
       <div className="mb-6 space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-2xl bg-emerald-600/10 flex items-center justify-center text-xl">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5">
+            <div className="relative w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white flex items-center justify-center text-2xl shadow-lg shadow-emerald-500/20 ring-1 ring-emerald-600/10">
               🧾
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-800 leading-tight">
-                Commandes
-              </h1>
+              <div className="flex items-center gap-2.5">
+                <h1 className="text-2xl font-bold text-gray-900 leading-tight">
+                  Commandes
+                </h1>
+                <span
+                  className={`px-2 py-0.5 rounded-full text-xs font-semibold ring-1 ${
+                    liveCount > 0
+                      ? "bg-amber-50 text-amber-700 ring-amber-200 animate-pulse"
+                      : "bg-emerald-50 text-emerald-700 ring-emerald-100"
+                  }`}
+                >
+                  {liveCount > 0
+                    ? `${liveCount} en cours`
+                    : "Toutes à jour"}
+                </span>
+              </div>
               <p className="text-sm text-gray-500">
                 Suivi des commandes en temps réel
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+
+          <div className="flex items-center gap-1 bg-white rounded-2xl border border-gray-100 shadow-sm p-1.5 w-fit">
             <button
               onClick={() => setSoundEnabled((prev) => !prev)}
               title="Son de notification nouvelle commande"
-              className={`px-3.5 py-2 rounded-xl text-sm font-medium transition-colors ${
+              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-medium transition-all ${
                 soundEnabled
-                  ? "bg-emerald-600 text-white"
-                  : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"
+                  ? "bg-emerald-600 text-white shadow-sm"
+                  : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
               }`}
             >
-              {soundEnabled ? "🔔" : "🔕"} Son
+              <span className="text-base leading-none">
+                {soundEnabled ? "🔔" : "🔕"}
+              </span>
+              <span>Son</span>
             </button>
             <button
               onClick={() => setShowReceipts((prev) => !prev)}
-              className={`px-3.5 py-2 rounded-xl text-sm font-medium transition-colors ${
+              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-medium transition-all ${
                 showReceipts
-                  ? "bg-emerald-600 text-white"
-                  : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"
+                  ? "bg-emerald-600 text-white shadow-sm"
+                  : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
               }`}
             >
-              🖨️ Reçus
+              <span className="text-base leading-none">🖨️</span>
+              <span>Reçus</span>
             </button>
           </div>
         </div>
@@ -498,49 +522,78 @@ export default function OrdersView() {
               <>
                 <button
                   onClick={() => setFilterStatus(null)}
-                  className={`px-3.5 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-sm font-medium transition-colors ${
                     !filterStatus
                       ? "bg-emerald-600 text-white shadow-sm"
                       : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                   }`}
                 >
                   Toutes
-                </button>
-                {Object.entries(statusConfig).map(([key, cfg]) => (
-                  <button
-                    key={key}
-                    onClick={() => setFilterStatus(key)}
-                    className={`px-3.5 py-1.5 rounded-full text-sm font-medium transition-colors ${
-                      filterStatus === key
-                        ? "bg-emerald-600 text-white shadow-sm"
-                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  <span
+                    className={`px-1.5 py-0.5 rounded-full text-xs font-semibold ${
+                      !filterStatus
+                        ? "bg-white/20 text-white"
+                        : "bg-gray-200 text-gray-600"
                     }`}
                   >
-                    {cfg.label}
-                  </button>
-                ))}
+                    {orders?.length || 0}
+                  </span>
+                </button>
+                {Object.entries(statusConfig).map(([key, cfg]) => {
+                  const count = statusCounts[key] || 0;
+                  return (
+                    <button
+                      key={key}
+                      onClick={() => setFilterStatus(key)}
+                      className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                        filterStatus === key
+                          ? "bg-emerald-600 text-white shadow-sm"
+                          : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                      }`}
+                    >
+                      <span
+                        className={`w-1.5 h-1.5 rounded-full ${
+                          filterStatus === key ? "bg-white" : cfg.dot
+                        }`}
+                      />
+                      {cfg.label}
+                      {count > 0 && (
+                        <span
+                          className={`px-1.5 py-0.5 rounded-full text-xs font-semibold ${
+                            filterStatus === key
+                              ? "bg-white/20 text-white"
+                              : "bg-gray-200 text-gray-600"
+                          }`}
+                        >
+                          {count}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
               </>
             )}
           </div>
 
           {isServerLike && (
-            <div className="flex items-center gap-2 lg:ml-auto">
+            <div className="lg:ml-auto flex flex-wrap items-center gap-2 lg:border-l lg:border-gray-100 lg:pl-4 pt-3 lg:pt-0 border-t border-gray-100">
+              <span className="text-xs font-medium text-gray-400">Période</span>
               <input
                 type="date"
                 value={exportRange.from}
                 onChange={(e) =>
                   setExportRange((prev) => ({ ...prev, from: e.target.value }))
                 }
-                className="px-2.5 py-1.5 border border-gray-200 rounded-lg text-sm"
+                className="px-2.5 py-1.5 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none transition-colors"
               />
-              <span className="text-gray-400 text-xs">→</span>
+              <span className="text-gray-300">→</span>
               <input
                 type="date"
                 value={exportRange.to}
                 onChange={(e) =>
                   setExportRange((prev) => ({ ...prev, to: e.target.value }))
                 }
-                className="px-2.5 py-1.5 border border-gray-200 rounded-lg text-sm"
+                className="px-2.5 py-1.5 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none transition-colors"
               />
               <button
                 onClick={() =>
@@ -550,9 +603,10 @@ export default function OrdersView() {
                   })
                 }
                 disabled={exportMutation.isPending}
-                className="px-3.5 py-1.5 rounded-lg text-sm font-medium bg-gray-900 text-white hover:bg-gray-800 disabled:opacity-50 transition-colors"
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold bg-gray-900 text-white hover:bg-gray-800 disabled:opacity-50 shadow-sm transition-colors"
               >
-                ⬇️ Exporter
+                <span className="text-sm leading-none">⬇️</span>
+                {exportMutation.isPending ? "Export..." : "Exporter"}
               </button>
             </div>
           )}
