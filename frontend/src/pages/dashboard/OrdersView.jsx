@@ -576,25 +576,27 @@ export default function OrdersView() {
           </div>
 
           {isServerLike && (
-            <div className="lg:ml-auto flex flex-wrap items-center gap-2 lg:border-l lg:border-gray-100 lg:pl-4 pt-3 lg:pt-0 border-t border-gray-100">
+            <div className="lg:ml-auto flex flex-wrap items-center gap-2.5 lg:border-l lg:border-gray-100 lg:pl-4 pt-3 lg:pt-0 border-t border-gray-100">
               <span className="text-xs font-medium text-gray-400">Période</span>
-              <input
-                type="date"
-                value={exportRange.from}
-                onChange={(e) =>
-                  setExportRange((prev) => ({ ...prev, from: e.target.value }))
-                }
-                className="px-2.5 py-1.5 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none transition-colors"
-              />
-              <span className="text-gray-300">→</span>
-              <input
-                type="date"
-                value={exportRange.to}
-                onChange={(e) =>
-                  setExportRange((prev) => ({ ...prev, to: e.target.value }))
-                }
-                className="px-2.5 py-1.5 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none transition-colors"
-              />
+              <div className="flex items-center border border-gray-200 rounded-xl overflow-hidden bg-gray-50 focus-within:bg-white focus-within:ring-2 focus-within:ring-emerald-500 focus-within:outline-none transition-all">
+                <input
+                  type="date"
+                  value={exportRange.from}
+                  onChange={(e) =>
+                    setExportRange((prev) => ({ ...prev, from: e.target.value }))
+                  }
+                  className="px-2.5 py-2 text-sm bg-transparent focus:outline-none [color-scheme:light]"
+                />
+                <span className="text-gray-300 text-sm px-0.5">→</span>
+                <input
+                  type="date"
+                  value={exportRange.to}
+                  onChange={(e) =>
+                    setExportRange((prev) => ({ ...prev, to: e.target.value }))
+                  }
+                  className="px-2.5 py-2 text-sm bg-transparent focus:outline-none [color-scheme:light]"
+                />
+              </div>
               <button
                 onClick={() =>
                   exportMutation.mutate({
