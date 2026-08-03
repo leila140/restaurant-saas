@@ -25,6 +25,8 @@ const defaultExportRange = () => {
   return { from: toLocalInput(from), to: toLocalInput(to) };
 };
 
+const SERVED_LIMIT = 6;
+
 const statusConfig = {
   pending: {
     label: "En attente",
@@ -128,6 +130,7 @@ export default function OrdersView() {
   const [exportRange, setExportRange] = useState(defaultExportRange);
   const [exportOpen, setExportOpen] = useState(false);
   const exportRef = useRef(null);
+  const [showAllServed, setShowAllServed] = useState(false);
 
   useEffect(() => {
     localStorage.setItem("kitchenSoundEnabled", soundEnabled ? "1" : "0");
@@ -808,8 +811,21 @@ export default function OrdersView() {
           <div>
             {renderSectionHeader("📋", "Servies / Payées", grouped.served.length)}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {grouped.served.map(renderOrderCard)}
+              {(showAllServed
+                ? grouped.served
+                : grouped.served.slice(0, SERVED_LIMIT)
+              ).map(renderOrderCard)}
             </div>
+            {grouped.served.length > SERVED_LIMIT && (
+              <button
+                onClick={() => setShowAllServed((v) => !v)}
+                className="mt-3 px-4 py-2 rounded-xl text-sm font-medium bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 transition-colors"
+              >
+                {showAllServed
+                  ? "Réduire"
+                  : `Voir plus (${grouped.served.length - SERVED_LIMIT})`}
+              </button>
+            )}
           </div>
         )}
 
