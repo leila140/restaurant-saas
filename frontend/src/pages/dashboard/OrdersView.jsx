@@ -25,23 +25,62 @@ const defaultExportRange = () => {
   return { from: toLocalInput(from), to: toLocalInput(to) };
 };
 
-const statusColors = {
-  pending: "bg-yellow-100 border-yellow-300 text-yellow-800",
-  preparing: "bg-blue-100 border-blue-300 text-blue-800",
-  ready: "bg-green-100 border-green-300 text-green-800",
-  served: "bg-gray-100 border-gray-300 text-gray-600",
-  paid: "bg-gray-100 border-gray-300 text-gray-400",
-  cancelled: "bg-red-100 border-red-300 text-red-800",
+const statusConfig = {
+  pending: {
+    label: "En attente",
+    dot: "bg-amber-500",
+    accent: "border-l-amber-400",
+    chip: "bg-amber-50 text-amber-700",
+  },
+  preparing: {
+    label: "En préparation",
+    dot: "bg-blue-500",
+    accent: "border-l-blue-400",
+    chip: "bg-blue-50 text-blue-700",
+  },
+  ready: {
+    label: "Prêt",
+    dot: "bg-green-500",
+    accent: "border-l-green-500",
+    chip: "bg-green-50 text-green-700",
+  },
+  served: {
+    label: "Servi",
+    dot: "bg-gray-400",
+    accent: "border-l-gray-300",
+    chip: "bg-gray-100 text-gray-600",
+  },
+  paid: {
+    label: "Payé",
+    dot: "bg-emerald-500",
+    accent: "border-l-emerald-500",
+    chip: "bg-emerald-50 text-emerald-700",
+  },
+  cancelled: {
+    label: "Annulé",
+    dot: "bg-red-500",
+    accent: "border-l-red-400",
+    chip: "bg-red-50 text-red-700",
+  },
 };
 
-const statusLabels = {
-  pending: "En attente",
-  preparing: "En préparation",
-  ready: "Prêt",
-  served: "Servi",
-  paid: "Payé",
-  cancelled: "Annulé",
+const primaryAction = {
+  pending: { label: "Préparer", cls: "bg-blue-600 hover:bg-blue-700" },
+  preparing: { label: "Prêt", cls: "bg-green-600 hover:bg-green-700" },
+  ready: { label: "Servi", cls: "bg-emerald-600 hover:bg-emerald-700" },
+  served: { label: "Payer", cls: "bg-emerald-600 hover:bg-emerald-700" },
 };
+
+const timeAgo = (dateStr) => {
+  const mins = Math.floor((Date.now() - new Date(dateStr).getTime()) / 60000);
+  if (mins < 1) return "à l'instant";
+  if (mins < 60) return `il y a ${mins} min`;
+  const h = Math.floor(mins / 60);
+  return `il y a ${h} h ${mins % 60}`;
+};
+
+const orderItemCount = (order) =>
+  (order.items || []).reduce((s, i) => s + i.quantity, 0);
 
 const roleFilters = {
   kitchen: ["pending", "preparing"],
@@ -238,121 +277,157 @@ export default function OrdersView() {
     served: filteredOrders.filter((o) => servedOrders.includes(o.status)),
   };
 
-  const renderOrderCard = (order) => (
-    <div
-      key={order._id}
-      className={`rounded-xl border-2 p-4 hover:shadow-md transition-shadow ${
-        statusColors[order.status] || "border-gray-200"
-      }`}
-    >
-      <div className="flex items-center justify-between mb-2">
-        <span className="font-bold text-lg">
-          Table {order.tableId?.number || "?"}
-        </span>
-        <span className="text-xs font-medium px-2 py-1 rounded-full bg-white/80">
-          {statusLabels[order.status]}
-        </span>
-      </div>
-      <div className="space-y-1 mb-3">
-        {order.items?.map((item, i) => (
-          <div key={i} className="flex justify-between text-sm">
-            <span>
-              {item.quantity}x {item.name}
-              {item.notes && (
-                <span className="text-gray-500 italic ml-1">({item.notes})</span>
-              )}
-            </span>
-            <span className="font-medium">
-              {(item.price * item.quantity).toFixed(2)} €
-            </span>
+  const renderOrderCard = (order) => {
+    const cfg = statusConfig[order.status] || statusConfig.pending;
+    const isNew =
+      order.status === "pending" &&
+      Date.now() - new Date(order.createdAt).getTime() < 120000;
+    const count = orderItemCount(order);
+
+    return (
+      <div
+        key={order._id}
+        className={`bg-white rounded-2xl border border-gray-100 border-l-4 ${cfg.accent} shadow-sm p-4 animate-fade-up transition-shadow hover:shadow-md`}
+      >
+        <div className="flex items-start justify-between mb-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center font-bold text-gray-800">
+              T{order.tableId?.number || "?"}
+            </div>
+            <div>
+              <p className="font-semibold text-gray-900 leading-tight">
+                Table {order.tableId?.number || "?"}
+              </p>
+              <p className="text-xs text-gray-400 flex items-center gap-1.5 mt-0.5">
+                <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
+                {cfg.label}
+              </p>
+            </div>
           </div>
-        ))}
-      </div>
-      <div className="flex items-center justify-between">
-        <span className="text-xs text-gray-500">
-          {new Date(order.createdAt).toLocaleTimeString("fr-FR", {
-            hour: "2-digit",
-            minute: "2-digit",
-          })}
-        </span>
-        <div className="flex gap-2">
-          {order.status !== "paid" && order.status !== "cancelled" && (
-            <>
-              {order.status === "pending" && actions.pending && (
-                <button
-                  onClick={() =>
-                    statusMutation.mutate({
-                      id: order._id,
-                      status: actions.pending,
-                    })
-                  }
-                  className="px-3 py-1.5 bg-blue-600 text-white text-xs rounded-lg hover:bg-blue-700"
-                >
-                  En préparation
-                </button>
-              )}
-              {order.status === "preparing" && actions.preparing && (
-                <button
-                  onClick={() =>
-                    statusMutation.mutate({
-                      id: order._id,
-                      status: actions.preparing,
-                    })
-                  }
-                  className="px-3 py-1.5 bg-green-600 text-white text-xs rounded-lg hover:bg-green-700"
-                >
-                  Prêt
-                </button>
-              )}
-              {order.status === "ready" && actions.ready && (
-                <button
-                  onClick={() =>
-                    statusMutation.mutate({
-                      id: order._id,
-                      status: actions.ready,
-                    })
-                  }
-                  className="px-3 py-1.5 bg-emerald-600 text-white text-xs rounded-lg hover:bg-emerald-700"
-                >
-                  Servi
-                </button>
-              )}
-              {order.status === "served" && actions.served && (
-                <button
-                  onClick={() =>
-                    statusMutation.mutate({
-                      id: order._id,
-                      status: actions.served,
-                    })
-                  }
-                  className="px-3 py-1.5 bg-emerald-600 text-white text-xs rounded-lg hover:bg-emerald-700"
-                >
-                  Payer
-                </button>
-              )}
-              {role === "owner" && order.status !== "cancelled" && (
-                <button
-                  onClick={() =>
-                    statusMutation.mutate({
-                      id: order._id,
-                      status: "cancelled",
-                    })
-                  }
-                  className="px-3 py-1.5 bg-red-100 text-red-700 text-xs rounded-lg hover:bg-red-200"
-                >
-                  Annuler
-                </button>
-              )}
-            </>
-          )}
-          {order.status === "paid" && (
-            <span className="text-xs text-gray-400 italic">Payé</span>
-          )}
-          {order.status === "cancelled" && (
-            <span className="text-xs text-red-400 italic">Annulé</span>
-          )}
+          <div className="text-right">
+            {isNew && (
+              <span className="inline-block px-2 py-0.5 rounded-full bg-red-100 text-red-600 text-[10px] font-bold uppercase tracking-wide animate-pulse mb-1">
+                Nouveau
+              </span>
+            )}
+            <p className="text-xs text-gray-400">{timeAgo(order.createdAt)}</p>
+          </div>
         </div>
+
+        <div className="space-y-1.5 mb-3">
+          {order.items?.map((item, i) => (
+            <div key={i} className="flex items-center gap-2 text-sm">
+              <span className="w-6 h-6 shrink-0 rounded-md bg-gray-100 text-gray-500 text-xs font-medium flex items-center justify-center">
+                {item.quantity}
+              </span>
+              <span className="text-gray-700 flex-1 truncate">
+                {item.name}
+                {item.notes && (
+                  <span className="text-gray-400 italic ml-1">
+                    ({item.notes})
+                  </span>
+                )}
+              </span>
+              <span className="font-medium text-gray-800 tabular-nums">
+                {(item.price * item.quantity).toFixed(2)} €
+              </span>
+            </div>
+          ))}
+        </div>
+
+        <div className="border-t border-gray-100 pt-3 flex items-center justify-between">
+          <span className="text-xs text-gray-400">
+            {count} article{count > 1 ? "s" : ""}
+          </span>
+          <span className="font-display text-lg font-semibold text-gray-900 tabular-nums">
+            {order.totalPrice.toFixed(2)} €
+          </span>
+        </div>
+
+        {order.status !== "paid" && order.status !== "cancelled" && (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {order.status === "pending" && actions.pending && (
+              <button
+                onClick={() =>
+                  statusMutation.mutate({
+                    id: order._id,
+                    status: actions.pending,
+                  })
+                }
+                className={`px-3.5 py-2 rounded-xl text-xs font-semibold text-white transition-colors ${primaryAction.pending.cls}`}
+              >
+                {primaryAction.pending.label}
+              </button>
+            )}
+            {order.status === "preparing" && actions.preparing && (
+              <button
+                onClick={() =>
+                  statusMutation.mutate({
+                    id: order._id,
+                    status: actions.preparing,
+                  })
+                }
+                className={`px-3.5 py-2 rounded-xl text-xs font-semibold text-white transition-colors ${primaryAction.preparing.cls}`}
+              >
+                {primaryAction.preparing.label}
+              </button>
+            )}
+            {order.status === "ready" && actions.ready && (
+              <button
+                onClick={() =>
+                  statusMutation.mutate({
+                    id: order._id,
+                    status: actions.ready,
+                  })
+                }
+                className={`px-3.5 py-2 rounded-xl text-xs font-semibold text-white transition-colors ${primaryAction.ready.cls}`}
+              >
+                {primaryAction.ready.label}
+              </button>
+            )}
+            {order.status === "served" && actions.served && (
+              <button
+                onClick={() =>
+                  statusMutation.mutate({
+                    id: order._id,
+                    status: actions.served,
+                  })
+                }
+                className={`px-3.5 py-2 rounded-xl text-xs font-semibold text-white transition-colors ${primaryAction.served.cls}`}
+              >
+                {primaryAction.served.label}
+              </button>
+            )}
+            {role === "owner" && order.status !== "cancelled" && (
+              <button
+                onClick={() =>
+                  statusMutation.mutate({
+                    id: order._id,
+                    status: "cancelled",
+                  })
+                }
+                className="px-3.5 py-2 rounded-xl text-xs font-semibold text-red-600 bg-red-50 hover:bg-red-100 transition-colors"
+              >
+                Annuler
+              </button>
+            )}
+          </div>
+        )}
       </div>
+    );
+  };
+
+  const renderSectionHeader = (icon, title, count) => (
+    <div className="flex items-center gap-2.5 mb-3">
+      <span className="w-8 h-8 rounded-lg bg-white border border-gray-100 shadow-sm flex items-center justify-center text-base">
+        {icon}
+      </span>
+      <h2 className="font-semibold text-gray-800">{title}</h2>
+      {count > 0 && (
+        <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 text-xs font-semibold">
+          {count}
+        </span>
+      )}
     </div>
   );
 
@@ -368,100 +443,118 @@ export default function OrdersView() {
 
   return (
     <div className="p-4 sm:p-6">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">Commandes</h1>
-        <button
-          onClick={() => setSoundEnabled((prev) => !prev)}
-          title="Son de notification nouvelle commande"
-          className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
-            soundEnabled
-              ? "bg-emerald-600 text-white"
-              : "bg-gray-100 text-gray-400"
-          }`}
-        >
-          🔔 {soundEnabled ? "Son activé" : "Son coupé"}
-        </button>
-        <button
-          onClick={() => setShowReceipts((prev) => !prev)}
-          className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
-            showReceipts
-              ? "bg-emerald-600 text-white"
-              : "bg-white text-gray-600 hover:bg-gray-50"
-          }`}
-        >
-          🖨️ Reçus
-        </button>
-        {isServerLike && (
+      <div className="mb-6 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 rounded-2xl bg-emerald-600/10 flex items-center justify-center text-xl">
+              🧾
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-800 leading-tight">
+                Commandes
+              </h1>
+              <p className="text-sm text-gray-500">
+                Suivi des commandes en temps réel
+              </p>
+            </div>
+          </div>
           <div className="flex items-center gap-2">
-            <input
-              type="date"
-              value={exportRange.from}
-              onChange={(e) =>
-                setExportRange((prev) => ({ ...prev, from: e.target.value }))
-              }
-              className="px-2 py-1.5 border border-gray-200 rounded-lg text-sm"
-            />
-            <span className="text-gray-400 text-xs">→</span>
-            <input
-              type="date"
-              value={exportRange.to}
-              onChange={(e) =>
-                setExportRange((prev) => ({ ...prev, to: e.target.value }))
-              }
-              className="px-2 py-1.5 border border-gray-200 rounded-lg text-sm"
-            />
             <button
-              onClick={() =>
-                exportMutation.mutate({
-                  from: exportRange.from,
-                  to: exportRange.to,
-                })
-              }
-              disabled={exportMutation.isPending}
-              className="px-3 py-1.5 rounded-full text-sm font-medium bg-white text-gray-600 hover:bg-gray-50 border border-gray-200 disabled:opacity-50"
+              onClick={() => setSoundEnabled((prev) => !prev)}
+              title="Son de notification nouvelle commande"
+              className={`px-3.5 py-2 rounded-xl text-sm font-medium transition-colors ${
+                soundEnabled
+                  ? "bg-emerald-600 text-white"
+                  : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"
+              }`}
             >
-              ⬇️ Exporter
+              {soundEnabled ? "🔔" : "🔕"} Son
+            </button>
+            <button
+              onClick={() => setShowReceipts((prev) => !prev)}
+              className={`px-3.5 py-2 rounded-xl text-sm font-medium transition-colors ${
+                showReceipts
+                  ? "bg-emerald-600 text-white"
+                  : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"
+              }`}
+            >
+              🖨️ Reçus
             </button>
           </div>
-        )}
-        <div className="flex gap-2 text-sm flex-wrap">
-          {allowedStatuses ? (
-            allowedStatuses.map((s) => (
-              <span
-                key={s}
-                className={`px-3 py-1 rounded-full ${
-                  statusColors[s]
-                } bg-opacity-50`}
-              >
-                {statusLabels[s]}
-              </span>
-            ))
-          ) : (
-            <>
-              <button
-                onClick={() => setFilterStatus(null)}
-                className={`px-3 py-1 rounded-full ${
-                  !filterStatus
-                    ? "bg-emerald-600 text-white"
-                    : "bg-gray-100 text-gray-600"
-                }`}
-              >
-                Toutes
-              </button>
-              {Object.entries(statusLabels).map(([key, label]) => (
+        </div>
+
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-3 flex flex-col lg:flex-row lg:items-center gap-3">
+          <div className="flex gap-1.5 flex-wrap">
+            {allowedStatuses ? (
+              allowedStatuses.map((s) => (
+                <span
+                  key={s}
+                  className={`px-3 py-1.5 rounded-full text-sm font-medium ${statusConfig[s]?.chip}`}
+                >
+                  {statusConfig[s]?.label}
+                </span>
+              ))
+            ) : (
+              <>
                 <button
-                  key={key}
-                  onClick={() => setFilterStatus(key)}
-                  className={`px-3 py-1 rounded-full ${
-                    filterStatus === key
-                      ? "bg-emerald-600 text-white"
-                      : "bg-gray-100 text-gray-600"
+                  onClick={() => setFilterStatus(null)}
+                  className={`px-3.5 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                    !filterStatus
+                      ? "bg-emerald-600 text-white shadow-sm"
+                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                   }`}
                 >
-                  {label}
+                  Toutes
                 </button>
-              ))}
-            </>
+                {Object.entries(statusConfig).map(([key, cfg]) => (
+                  <button
+                    key={key}
+                    onClick={() => setFilterStatus(key)}
+                    className={`px-3.5 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                      filterStatus === key
+                        ? "bg-emerald-600 text-white shadow-sm"
+                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    }`}
+                  >
+                    {cfg.label}
+                  </button>
+                ))}
+              </>
+            )}
+          </div>
+
+          {isServerLike && (
+            <div className="flex items-center gap-2 lg:ml-auto">
+              <input
+                type="date"
+                value={exportRange.from}
+                onChange={(e) =>
+                  setExportRange((prev) => ({ ...prev, from: e.target.value }))
+                }
+                className="px-2.5 py-1.5 border border-gray-200 rounded-lg text-sm"
+              />
+              <span className="text-gray-400 text-xs">→</span>
+              <input
+                type="date"
+                value={exportRange.to}
+                onChange={(e) =>
+                  setExportRange((prev) => ({ ...prev, to: e.target.value }))
+                }
+                className="px-2.5 py-1.5 border border-gray-200 rounded-lg text-sm"
+              />
+              <button
+                onClick={() =>
+                  exportMutation.mutate({
+                    from: exportRange.from,
+                    to: exportRange.to,
+                  })
+                }
+                disabled={exportMutation.isPending}
+                className="px-3.5 py-1.5 rounded-lg text-sm font-medium bg-gray-900 text-white hover:bg-gray-800 disabled:opacity-50 transition-colors"
+              >
+                ⬇️ Exporter
+              </button>
+            </div>
           )}
         </div>
       </div>
@@ -469,57 +562,80 @@ export default function OrdersView() {
       <div className="space-y-6">
         {isServerLike && bills.length > 0 && (
           <div>
-            <h2 className="text-lg font-semibold text-gray-700 mb-3">
-              💰 Additions en cours ({bills.length})
-            </h2>
+            {renderSectionHeader("💰", "Additions en cours", bills.length)}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {bills.map((bill) => (
-                <div
-                  key={bill.tableId}
-                  className="bg-white rounded-xl border border-gray-200 p-4"
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="font-bold text-lg">
-                      Table {bill.tableNumber}
-                    </span>
-                    <span className="font-display text-xl font-semibold text-emerald-900 tabular-nums">
-                      {bill.total.toFixed(2)} €
-                    </span>
-                  </div>
-                  <div className="space-y-1 mb-3 max-h-40 overflow-auto">
-                    {bill.orders.map((order) =>
-                      order.items.map((item, i) => (
-                        <div
-                          key={`${order._id}-${i}`}
-                          className="flex justify-between text-sm"
-                        >
-                          <span className="text-gray-700">
-                            {item.quantity}x {item.name}
-                          </span>
-                          <span className="font-medium text-gray-600">
-                            {(item.price * item.quantity).toFixed(2)} €
-                          </span>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                  <button
-                    onClick={() => setCheckoutBill(bill)}
-                    className="w-full px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm rounded-lg font-medium transition-colors"
+              {bills.map((bill) => {
+                const billItems = bill.orders.reduce(
+                  (s, o) => s + orderItemCount(o),
+                  0
+                );
+                return (
+                  <div
+                    key={bill.tableId}
+                    className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden"
                   >
-                    Encaisser — {bill.total.toFixed(2)} €
-                  </button>
-                </div>
-              ))}
+                    <div className="p-4 flex items-center justify-between bg-gradient-to-br from-emerald-50 to-teal-50 border-b border-emerald-100">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold">
+                          T{bill.tableNumber}
+                        </div>
+                        <div>
+                          <p className="font-semibold text-gray-900 leading-tight">
+                            Table {bill.tableNumber}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {bill.count} commande{bill.count > 1 ? "s" : ""} ·{" "}
+                            {billItems} article{billItems > 1 ? "s" : ""}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[10px] uppercase tracking-wider text-gray-400">
+                          Total
+                        </p>
+                        <p className="font-display text-xl font-semibold text-emerald-900 tabular-nums">
+                          {bill.total.toFixed(2)} €
+                        </p>
+                      </div>
+                    </div>
+                    <div className="p-4 space-y-1.5 max-h-40 overflow-auto">
+                      {bill.orders.map((order) =>
+                        order.items.map((item, i) => (
+                          <div
+                            key={`${order._id}-${i}`}
+                            className="flex items-center gap-2 text-sm"
+                          >
+                            <span className="w-6 h-6 shrink-0 rounded-md bg-gray-100 text-gray-500 text-xs font-medium flex items-center justify-center">
+                              {item.quantity}
+                            </span>
+                            <span className="text-gray-700 flex-1 truncate">
+                              {item.name}
+                            </span>
+                            <span className="font-medium text-gray-600 tabular-nums">
+                              {(item.price * item.quantity).toFixed(2)} €
+                            </span>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                    <div className="px-4 pb-4">
+                      <button
+                        onClick={() => setCheckoutBill(bill)}
+                        className="w-full px-3 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm rounded-xl font-semibold transition-colors shadow-sm"
+                      >
+                        Encaisser — {bill.total.toFixed(2)} €
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
 
         {showReceipts && (
           <div>
-            <h2 className="text-lg font-semibold text-gray-700 mb-3">
-              🖨️ Derniers tickets
-            </h2>
+            {renderSectionHeader("🧾", "Derniers tickets", receipts.length)}
             {receipts.length === 0 ? (
               <EmptyState
                 icon="🧾"
@@ -527,26 +643,31 @@ export default function OrdersView() {
                 subtitle="Les tickets apparaissent après chaque encaissement"
               />
             ) : (
-              <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100">
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm divide-y divide-gray-50 overflow-hidden">
                 {receipts.map((r) => (
                   <button
                     key={r.receiptNumber}
                     onClick={() => setReceiptNumber(r.receiptNumber)}
-                    className="w-full flex items-center justify-between px-4 py-3 text-sm hover:bg-gray-50 transition-colors"
+                    className="w-full flex items-center gap-4 px-4 py-3.5 text-left hover:bg-gray-50 transition-colors"
                   >
-                    <span className="text-gray-700">
-                      Ticket{" "}
-                      <span className="font-semibold">
-                        #{String(r.receiptNumber).padStart(4, "0")}
-                      </span>
-                      <span className="text-gray-400 ml-2">
+                    <div className="w-9 h-9 rounded-lg bg-gray-100 flex items-center justify-center text-gray-500">
+                      🧾
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-gray-800">
+                        Ticket{" "}
+                        <span className="font-semibold">
+                          #{String(r.receiptNumber).padStart(4, "0")}
+                        </span>
+                      </p>
+                      <p className="text-xs text-gray-400">
                         Table {r.tableNumber} ·{" "}
                         {new Date(r.paidAt).toLocaleString("fr-FR", {
                           dateStyle: "short",
                           timeStyle: "short",
                         })}
-                      </span>
-                    </span>
+                      </p>
+                    </div>
                     <span className="font-semibold text-emerald-700 tabular-nums">
                       {r.total.toFixed(2)} €
                     </span>
@@ -559,9 +680,7 @@ export default function OrdersView() {
 
         {role !== "server" && grouped.kitchen.length > 0 && (
           <div>
-            <h2 className="text-lg font-semibold text-gray-700 mb-3">
-              🍳 En cuisine ({grouped.kitchen.length})
-            </h2>
+            {renderSectionHeader("🍳", "En cuisine", grouped.kitchen.length)}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {grouped.kitchen.map(renderOrderCard)}
             </div>
@@ -570,9 +689,7 @@ export default function OrdersView() {
 
         {grouped.ready.length > 0 && (
           <div>
-            <h2 className="text-lg font-semibold text-gray-700 mb-3">
-              ✅ Prêtes à servir ({grouped.ready.length})
-            </h2>
+            {renderSectionHeader("✅", "Prêtes à servir", grouped.ready.length)}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {grouped.ready.map(renderOrderCard)}
             </div>
@@ -581,9 +698,7 @@ export default function OrdersView() {
 
         {role !== "kitchen" && grouped.served.length > 0 && (
           <div>
-            <h2 className="text-lg font-semibold text-gray-500 mb-3">
-              📋 Servies / Payées ({grouped.served.length})
-            </h2>
+            {renderSectionHeader("📋", "Servies / Payées", grouped.served.length)}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {grouped.served.map(renderOrderCard)}
             </div>
