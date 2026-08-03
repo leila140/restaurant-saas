@@ -9,6 +9,21 @@ import EmptyState from "../../components/EmptyState";
 import { SkeletonCard } from "../../components/Skeleton";
 import CheckoutModal from "../../components/CheckoutModal";
 import ReceiptModal from "../../components/ReceiptModal";
+import { downloadCSV, formatMoney } from "../../utils/csv";
+
+const toLocalInput = (d) => {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+};
+
+const defaultExportRange = () => {
+  const to = new Date();
+  const from = new Date();
+  from.setDate(from.getDate() - 30);
+  return { from: toLocalInput(from), to: toLocalInput(to) };
+};
 
 const statusColors = {
   pending: "bg-yellow-100 border-yellow-300 text-yellow-800",
@@ -71,6 +86,7 @@ export default function OrdersView() {
   const [checkoutBill, setCheckoutBill] = useState(null);
   const [receiptNumber, setReceiptNumber] = useState(null);
   const [showReceipts, setShowReceipts] = useState(false);
+  const [exportRange, setExportRange] = useState(defaultExportRange);
 
   useEffect(() => {
     localStorage.setItem("kitchenSoundEnabled", soundEnabled ? "1" : "0");
@@ -123,6 +139,52 @@ export default function OrdersView() {
       toast.success("Addition encaissée, table libérée");
     },
     onError: () => toast.error("Erreur lors de l'encaissement"),
+  });
+
+  const exportMutation = useMutation({
+    mutationFn: ({ from, to }) =>
+      api.get("/orders/export", { params: { from, to } }).then((r) => r.data),
+    onSuccess: (rows) => {
+      if (!rows.length) return toast.error("Aucune commande sur cette période");
+      downloadCSV(
+        `commandes_${exportRange.from}_${exportRange.to}.csv`,
+        [
+          "Date",
+          "Heure",
+          "Table",
+          "Statut",
+          "Articles",
+          "Qté",
+          "Sous-total",
+          "Remise %",
+          "Montant remise",
+          "Pourboire",
+          "Total payé",
+          "Paiement",
+          "N° ticket",
+        ],
+        rows.map((r) => [
+          new Date(r.createdAt).toLocaleDateString("fr-FR"),
+          new Date(r.createdAt).toLocaleTimeString("fr-FR", {
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+          r.tableNumber,
+          r.status,
+          r.items,
+          r.itemCount,
+          formatMoney(r.subtotal),
+          r.discountPercent,
+          formatMoney(r.discountAmount),
+          formatMoney(r.tip),
+          formatMoney(r.totalPaid),
+          r.paymentMethod,
+          r.receiptNumber,
+        ])
+      );
+      toast.success(`Export : ${rows.length} commande(s)`);
+    },
+    onError: () => toast.error("Erreur lors de l'export"),
   });
 
   const { data: receipts = [] } = useQuery({
@@ -329,6 +391,39 @@ export default function OrdersView() {
         >
           🖨️ Reçus
         </button>
+        {isServerLike && (
+          <div className="flex items-center gap-2">
+            <input
+              type="date"
+              value={exportRange.from}
+              onChange={(e) =>
+                setExportRange((prev) => ({ ...prev, from: e.target.value }))
+              }
+              className="px-2 py-1.5 border border-gray-200 rounded-lg text-sm"
+            />
+            <span className="text-gray-400 text-xs">→</span>
+            <input
+              type="date"
+              value={exportRange.to}
+              onChange={(e) =>
+                setExportRange((prev) => ({ ...prev, to: e.target.value }))
+              }
+              className="px-2 py-1.5 border border-gray-200 rounded-lg text-sm"
+            />
+            <button
+              onClick={() =>
+                exportMutation.mutate({
+                  from: exportRange.from,
+                  to: exportRange.to,
+                })
+              }
+              disabled={exportMutation.isPending}
+              className="px-3 py-1.5 rounded-full text-sm font-medium bg-white text-gray-600 hover:bg-gray-50 border border-gray-200 disabled:opacity-50"
+            >
+              ⬇️ Exporter
+            </button>
+          </div>
+        )}
         <div className="flex gap-2 text-sm flex-wrap">
           {allowedStatuses ? (
             allowedStatuses.map((s) => (
