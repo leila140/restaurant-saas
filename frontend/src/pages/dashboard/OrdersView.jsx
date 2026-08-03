@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import api from "../../services/api";
@@ -126,10 +126,30 @@ export default function OrdersView() {
   const [receiptNumber, setReceiptNumber] = useState(null);
   const [showReceipts, setShowReceipts] = useState(false);
   const [exportRange, setExportRange] = useState(defaultExportRange);
+  const [exportOpen, setExportOpen] = useState(false);
+  const exportRef = useRef(null);
 
   useEffect(() => {
     localStorage.setItem("kitchenSoundEnabled", soundEnabled ? "1" : "0");
   }, [soundEnabled]);
+
+  useEffect(() => {
+    if (!exportOpen) return;
+    const onClick = (e) => {
+      if (exportRef.current && !exportRef.current.contains(e.target)) {
+        setExportOpen(false);
+      }
+    };
+    const onKey = (e) => {
+      if (e.key === "Escape") setExportOpen(false);
+    };
+    document.addEventListener("mousedown", onClick);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onClick);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [exportOpen]);
 
   const allowedStatuses = roleFilters[role] || null;
   const actions = roleActions[role] || {};
@@ -185,6 +205,7 @@ export default function OrdersView() {
       api.get("/orders/export", { params: { from, to } }).then((r) => r.data),
     onSuccess: (rows) => {
       if (!rows.length) return toast.error("Aucune commande sur cette période");
+      setExportOpen(false);
       downloadCSV(
         `commandes_${exportRange.from}_${exportRange.to}.csv`,
         [
@@ -480,42 +501,71 @@ export default function OrdersView() {
 
           <div className="flex flex-col sm:flex-row sm:items-center gap-3">
             {isServerLike && (
-              <div className="flex items-center gap-2.5">
-                <span className="text-xs font-medium text-gray-400">Période</span>
-                <div className="flex items-center border border-gray-200 rounded-xl overflow-hidden bg-gray-50 focus-within:bg-white focus-within:ring-2 focus-within:ring-emerald-500 focus-within:outline-none transition-all">
-                  <input
-                    type="date"
-                    value={exportRange.from}
-                    onChange={(e) =>
-                      setExportRange((prev) => ({ ...prev, from: e.target.value }))
-                    }
-                    className="px-2.5 py-2 text-sm bg-transparent focus:outline-none [color-scheme:light]"
-                  />
-                  <span className="text-gray-300 text-sm px-0.5">→</span>
-                  <input
-                    type="date"
-                    value={exportRange.to}
-                    onChange={(e) =>
-                      setExportRange((prev) => ({ ...prev, to: e.target.value }))
-                    }
-                    className="px-2.5 py-2 text-sm bg-transparent focus:outline-none [color-scheme:light]"
-                  />
-                </div>
+              <div ref={exportRef} className="relative">
                 <button
-                  onClick={() =>
-                    exportMutation.mutate({
-                      from: exportRange.from,
-                      to: exportRange.to,
-                    })
-                  }
-                  disabled={exportMutation.isPending}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 shadow-sm shadow-emerald-600/20 ring-1 ring-emerald-600/10 transition-all"
+                  onClick={() => setExportOpen((v) => !v)}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
+                    exportOpen
+                      ? "bg-emerald-600 text-white shadow-sm shadow-emerald-600/20 ring-1 ring-emerald-600/10"
+                      : "bg-white text-gray-700 border border-gray-200 hover:bg-gray-50"
+                  }`}
                 >
-                  <span className="w-5 h-5 rounded-md bg-white/20 flex items-center justify-center text-xs leading-none">
-                    ⬇️
-                  </span>
-                  {exportMutation.isPending ? "Export..." : "Exporter"}
+                  <span className="text-sm leading-none">⬇️</span>
+                  Exporter
                 </button>
+
+                {exportOpen && (
+                  <div className="absolute right-0 top-full mt-2 w-96 bg-white rounded-2xl border border-gray-100 shadow-xl p-4 z-50">
+                    <p className="text-sm font-medium text-gray-700 mb-2">
+                      Période
+                    </p>
+                    <div className="flex items-center border border-gray-200 rounded-xl overflow-hidden bg-gray-50 focus-within:bg-white focus-within:ring-2 focus-within:ring-emerald-500 focus-within:outline-none transition-all mb-4">
+                      <input
+                        type="date"
+                        value={exportRange.from}
+                        onChange={(e) =>
+                          setExportRange((prev) => ({
+                            ...prev,
+                            from: e.target.value,
+                          }))
+                        }
+                        className="px-2.5 py-2 text-sm bg-transparent focus:outline-none [color-scheme:light] w-full"
+                      />
+                      <span className="text-gray-300 text-sm px-0.5">→</span>
+                      <input
+                        type="date"
+                        value={exportRange.to}
+                        onChange={(e) =>
+                          setExportRange((prev) => ({
+                            ...prev,
+                            to: e.target.value,
+                          }))
+                        }
+                        className="px-2.5 py-2 text-sm bg-transparent focus:outline-none [color-scheme:light] w-full"
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setExportOpen(false)}
+                        className="flex-1 px-3 py-2 rounded-xl border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+                      >
+                        Annuler
+                      </button>
+                      <button
+                        onClick={() =>
+                          exportMutation.mutate({
+                            from: exportRange.from,
+                            to: exportRange.to,
+                          })
+                        }
+                        disabled={exportMutation.isPending}
+                        className="flex-1 px-3 py-2 rounded-xl text-sm font-semibold bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 shadow-sm shadow-emerald-600/20 transition-all"
+                      >
+                        {exportMutation.isPending ? "Export..." : "Exporter"}
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -550,8 +600,7 @@ export default function OrdersView() {
         </div>
 
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-3 flex gap-1.5 flex-wrap">
-          <div className="flex gap-1.5 flex-wrap">
-            {allowedStatuses ? (
+          {allowedStatuses ? (
               allowedStatuses.map((s) => (
                 <span
                   key={s}
@@ -615,7 +664,6 @@ export default function OrdersView() {
                 })}
               </>
             )}
-          </div>
         </div>
       </div>
 
