@@ -13,9 +13,14 @@ const server = http.createServer(app);
 const uploadsDir = path.join(__dirname, "uploads");
 fs.mkdirSync(uploadsDir, { recursive: true });
 
+const defaultOrigins = ["http://localhost:5173", "http://localhost:4173"];
+const clientOrigins = process.env.CLIENT_URL
+  ? process.env.CLIENT_URL.split(",").map((s) => s.trim())
+  : defaultOrigins;
+
 const io = new Server(server, {
   cors: {
-    origin: process.env.CLIENT_URL || "http://localhost:5173",
+    origin: clientOrigins,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
   },
 });
