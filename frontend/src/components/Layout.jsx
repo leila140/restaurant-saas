@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import useOnline from "../hooks/useOnline";
 
 const navItems = {
   owner: [
@@ -31,9 +32,15 @@ export default function Layout() {
   const { user, logout } = useAuth();
   const items = navItems[user?.role] || [];
   const [open, setOpen] = useState(false);
+  const online = useOnline();
 
   return (
     <div className="flex h-screen bg-gray-100">
+      {!online && (
+        <div className="fixed top-0 inset-x-0 z-[60] bg-amber-500 text-white text-center text-sm font-medium py-1.5 px-4">
+          ⚠️ Hors ligne — mode lecture seule
+        </div>
+      )}
       {/* Sidebar */}
       <aside
         className={`
