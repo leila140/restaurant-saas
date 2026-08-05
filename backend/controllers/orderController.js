@@ -601,3 +601,115 @@ exports.getOrderStatus = async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 };
+
+const round2 = (n) => Math.round(n * 100) / 100;
+
+// Staff: daily cash register report (Z-report) for a given date
+exports.getDailyReport = async (req, res) => {
+  try {
+    const dateStr = req.query.date;
+    const day = dateStr ? new Date(dateStr + "T00:00:00") : new Date();
+    if (isNaN(day.getTime())) {
+      return res.status(400).json({ error: "Invalid date (expected YYYY-MM-DD)" });
+    }
+    const start = new Date(day);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(day);
+    end.setHours(23, 59, 59, 999);
+
+    const paidOrders = await Order.find({
+      restaurantId: req.restaurantId,
+      status: "paid",
+      paidAt: { $gte: start, $lte: end },
+    }).populate("tableId", "number");
+
+    const cancelledOrders = await Order.find({
+      restaurantId: req.restaurantId,
+      status: "cancelled",
+      createdAt: { $gte: start, $lte: end },
+    }).populate("tableId", "number");
+
+    const byPaymentMethod = { cash: { count: 0, amount: 0 }, card: { count: 0, amount: 0 } };
+    const byTable = {};
+    const groups = new Map();
+    let totalRevenue = 0;
+    let discountTotal = 0;
+    let tipTotal = 0;
+    let itemCount = 0;
+    const tickets = new Set();
+
+    paidOrders.forEach((o) => {
+      itemCount += (o.items || []).reduce((s, it) => s + (it.quantity || 0), 0);
+      const key =
+        o.receiptNumber > 0 ? `r_${o.receiptNumber}` : `o_${String(o._id)}`;
+      if (!groups.has(key)) {
+        groups.set(key, {
+          orders: [],
+          paymentMethod: o.paymentMethod,
+          discountPercent: o.discountPercent || 0,
+          tip: o.tip || 0,
+          receiptNumber: o.receiptNumber,
+        });
+      }
+      groups.get(key).orders.push(o);
+    });
+
+    groups.forEach((g) => {
+      const subtotal = round2(
+        g.orders.reduce((s, o) => s + o.totalPrice, 0)
+      );
+      const discountAmount =
+        Math.round(subtotal * (g.discountPercent / 100) * 100) / 100;
+      const total = round2(subtotal - discountAmount + g.tip);
+      totalRevenue += total;
+      discountTotal += discountAmount;
+      tipTotal += g.tip;
+      if (g.receiptNumber > 0) tickets.add(String(g.receiptNumber));
+
+      const method = g.paymentMethod === "card" ? "card" : "cash";
+      byPaymentMethod[method].count += 1;
+      byPaymentMethod[method].amount += total;
+
+      const tableNumber = g.orders[0].tableId?.number;
+      const key = tableNumber ? String(tableNumber) : "Sans table";
+      if (!byTable[key]) byTable[key] = { tableNumber, orders: 0, amount: 0 };
+      byTable[key].orders += g.orders.length;
+      byTable[key].amount += total;
+    });
+
+    const cancelledValue = cancelledOrders.reduce((s, o) => s + o.totalPrice, 0);
+
+    res.json({
+      date: dateStr || day.toISOString().slice(0, 10),
+      generatedAt: new Date().toISOString(),
+      totalRevenue: round2(totalRevenue),
+      orderCount: paidOrders.length,
+      ticketCount: tickets.size,
+      averageTicket: tickets.size ? round2(totalRevenue / tickets.size) : 0,
+      itemCount,
+      discountTotal: round2(discountTotal),
+      tipTotal: round2(tipTotal),
+      cancelledCount: cancelledOrders.length,
+      cancelledValue: round2(cancelledValue),
+      byPaymentMethod: {
+        cash: {
+          count: byPaymentMethod.cash.count,
+          amount: round2(byPaymentMethod.cash.amount),
+        },
+        card: {
+          count: byPaymentMethod.card.count,
+          amount: round2(byPaymentMethod.card.amount),
+        },
+      },
+      byTable: Object.values(byTable)
+        .map((t) => ({
+          tableNumber: t.tableNumber,
+          orders: t.orders,
+          amount: round2(t.amount),
+        }))
+        .sort((a, b) => (a.tableNumber || 0) - (b.tableNumber || 0)),
+    });
+  } catch (err) {
+    res.status(500).json({ error: "Internal server error" });
+  }
+};

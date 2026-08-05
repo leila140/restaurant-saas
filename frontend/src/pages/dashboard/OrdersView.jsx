@@ -9,6 +9,7 @@ import EmptyState from "../../components/EmptyState";
 import { SkeletonCard } from "../../components/Skeleton";
 import CheckoutModal from "../../components/CheckoutModal";
 import ReceiptModal from "../../components/ReceiptModal";
+import DailyReportModal from "../../components/DailyReportModal";
 import { downloadCSV, formatMoney } from "../../utils/csv";
 
 const toLocalInput = (d) => {
@@ -131,6 +132,7 @@ export default function OrdersView() {
   const [exportOpen, setExportOpen] = useState(false);
   const exportRef = useRef(null);
   const [showAllServed, setShowAllServed] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
 
   useEffect(() => {
     localStorage.setItem("kitchenSoundEnabled", soundEnabled ? "1" : "0");
@@ -504,7 +506,15 @@ export default function OrdersView() {
 
           <div className="flex flex-col sm:flex-row sm:items-center gap-3">
             {isServerLike && (
-              <div ref={exportRef} className="relative">
+              <>
+                <button
+                  onClick={() => setReportOpen(true)}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-white text-gray-700 border border-gray-200 hover:bg-gray-50 transition-all"
+                >
+                  <span className="text-sm leading-none">💰</span>
+                  Caisse
+                </button>
+                <div ref={exportRef} className="relative">
                 <button
                   onClick={() => setExportOpen((v) => !v)}
                   className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
@@ -570,6 +580,7 @@ export default function OrdersView() {
                   </div>
                 )}
               </div>
+              </>
             )}
 
             <div className="flex items-center gap-1 bg-white rounded-2xl border border-gray-100 shadow-sm p-1.5 w-fit">
@@ -857,6 +868,10 @@ export default function OrdersView() {
           receiptNumber={receiptNumber}
           onClose={() => setReceiptNumber(null)}
         />
+      )}
+
+      {reportOpen && (
+        <DailyReportModal onClose={() => setReportOpen(false)} />
       )}
     </div>
   );

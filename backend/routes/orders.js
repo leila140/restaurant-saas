@@ -47,6 +47,13 @@ router.get(
   roleCheck(["owner", "manager", "server"]),
   orderController.exportOrders
 );
+router.get(
+  "/report",
+  auth,
+  tenant,
+  roleCheck(["owner", "manager", "server"]),
+  orderController.getDailyReport
+);
 router.get("/:id", auth, tenant, orderController.getOrder);
 router.patch("/:id/status", auth, tenant, orderController.updateStatus);
 
