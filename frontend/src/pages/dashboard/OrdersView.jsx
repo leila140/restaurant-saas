@@ -585,7 +585,11 @@ export default function OrdersView() {
 
             <div className="flex items-center gap-1 bg-white rounded-2xl border border-gray-100 shadow-sm p-1.5 w-fit">
               <button
-                onClick={() => setSoundEnabled((prev) => !prev)}
+                onClick={() => {
+                  const next = !soundEnabled;
+                  setSoundEnabled(next);
+                  if (next) playNewOrderSound();
+                }}
                 title="Son de notification nouvelle commande"
                 className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-medium transition-all ${
                   soundEnabled
