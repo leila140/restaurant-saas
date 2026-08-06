@@ -13,6 +13,9 @@ build/
 # Uploaded files
 backend/uploads/
 
+# Original demo GIF (backup local, 24 Mo, ne pas pousser)
+assets/original.gif
+
 # Logs
 *.log
 npm-debug.log*
