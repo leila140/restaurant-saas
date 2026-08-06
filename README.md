@@ -2,6 +2,10 @@
 
 SaaS de gestion de restaurant : menu public par QR code, commandes en temps réel, réservations, encaissement et rapport de caisse.
 
+## Aperçu
+
+![Démo de l'application](assets/demo.gif)
+
 ## Fonctionnalités
 
 - **Menu public** : menu consultable en ligne, QR code par table, suivi de commande en temps réel.
