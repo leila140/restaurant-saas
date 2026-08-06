@@ -60,11 +60,13 @@ export default function DailyReportModal({ onClose }) {
           body * { visibility: hidden; }
           #report-print, #report-print * { visibility: visible; }
           #report-print { position: absolute; left: 0; top: 0; width: 100%; box-shadow: none !important; }
+          #report-card { max-height: none !important; }
+          #report-scroll { overflow: visible !important; max-height: none !important; }
         }
       `}</style>
 
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-xl">
-        <div className="p-4 border-b flex items-center justify-between gap-3">
+      <div id="report-card" className="w-full max-w-md bg-white rounded-2xl shadow-xl flex flex-col max-h-[92vh]">
+        <div className="p-4 border-b flex items-center justify-between gap-3 shrink-0">
           <div>
             <h2 className="font-semibold text-gray-800">Rapport de caisse</h2>
             <input
@@ -82,7 +84,7 @@ export default function DailyReportModal({ onClose }) {
           </button>
         </div>
 
-        <div className="p-4 max-h-[70vh] overflow-y-auto">
+        <div id="report-scroll" className="p-4 flex-1 overflow-y-auto min-h-0">
           {isLoading ? (
             <SkeletonCard />
           ) : !report ? (
@@ -231,7 +233,7 @@ export default function DailyReportModal({ onClose }) {
           )}
         </div>
 
-        <div className="p-4 pt-0 flex gap-2">
+        <div className="p-4 pt-0 flex gap-2 shrink-0">
           <button
             onClick={onClose}
             className="flex-1 px-3 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50"

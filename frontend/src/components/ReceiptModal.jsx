@@ -32,11 +32,13 @@ export default function ReceiptModal({ receiptNumber, onClose }) {
           body * { visibility: hidden; }
           #receipt-print, #receipt-print * { visibility: visible; }
           #receipt-print { position: absolute; left: 0; top: 0; width: 100%; box-shadow: none !important; }
+          #receipt-card { max-height: none !important; }
+          #receipt-scroll { overflow: visible !important; max-height: none !important; }
         }
       `}</style>
 
-      <div className="w-full max-w-sm bg-white rounded-2xl shadow-xl">
-        <div className="p-4 border-b flex items-center justify-between">
+      <div id="receipt-card" className="w-full max-w-sm bg-white rounded-2xl shadow-xl flex flex-col max-h-[90vh]">
+        <div className="p-4 border-b flex items-center justify-between shrink-0">
           <h2 className="font-semibold text-gray-800">Ticket de caisse</h2>
           <button
             onClick={onClose}
@@ -46,7 +48,7 @@ export default function ReceiptModal({ receiptNumber, onClose }) {
           </button>
         </div>
 
-        <div className="p-4">
+        <div id="receipt-scroll" className="p-4 flex-1 overflow-y-auto min-h-0">
           {isLoading ? (
             <SkeletonCard />
           ) : !receipt ? (
@@ -141,7 +143,7 @@ export default function ReceiptModal({ receiptNumber, onClose }) {
           )}
         </div>
 
-        <div className="p-4 pt-0 flex gap-2">
+        <div className="p-4 pt-0 flex gap-2 shrink-0">
           <button
             onClick={onClose}
             className="flex-1 px-3 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50"
