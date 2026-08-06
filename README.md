@@ -112,6 +112,4 @@ frontend/
     utils/      # csv, sound, hours
 ```
 
-## Déploiement
 
-Le déploiement en production (Render + MongoDB Atlas, uploads en stockage cloud) est à venir.
